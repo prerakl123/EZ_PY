@@ -16,6 +16,8 @@ choose which file to create. On choosing the type, the file will be opened in th
 
 The number of new Python files or simple text files or MarkDownfiles or the number of Consoles you open will be displayed as tab name.
 
+Menubar will be created as soon as a new file is created or opened.
+
 ### Shortcut key combinations
 If `Ctrl+O` is pressed while current focus is out of the tabs a new tab will be created with filename as tab name, otherwise if the focus is currently inside the editor the file 
 may open in the same one (which is like a bug) but once you realize the pattern of things happening you may find it handy.
@@ -64,6 +66,8 @@ Consoles that will be added may take input but the output or the error will be d
 reader)
 
 Tab lengths currently have to be defined in the `tab_length` key in `config.json` file.
+
+`Ctrl+W` or `Ctrl+F4` for closing the current tab might not work if the focus not set on the Notebook widget but the 'X' for closing the tabs is included.
 
 # Future Updates
 More Themes will be updated and the currently defined but not assigned themes will have their color combinations assigned to them.

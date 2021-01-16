@@ -943,9 +943,11 @@ class TestApp(Tk):
         self.frame.bind("<ButtonPress-1>", self.start_move)
         self.frame.bind("<ButtonRelease-1>", self.stop_move)
         self.frame.bind("<B1-Motion>", self.do_move)
+        self.frame.bind('<Double-1>', self.maximize_win)
         self.name.bind("<ButtonPress-1>", self.start_move)
         self.name.bind("<ButtonRelease-1>", self.stop_move)
         self.name.bind("<B1-Motion>", self.do_move)
+        self.name.bind('<Double-1>', self.maximize_win)
 
     def start_move(self, event):
         self.x = event.x
@@ -974,12 +976,12 @@ class TestApp(Tk):
         self.geometry("%sx%s" % ((x1-x0),(y1-y0)))
         return
 
-    def minimize_win(self):
+    def minimize_win(self, event=None):
         self.overrideredirect(False)
         self.wm_iconify()
         self.bind('<FocusIn>', self.on_deiconify)
 
-    def maximize_win(self):
+    def maximize_win(self, event=None):
         if self.maximize.cget('text') == u"\U0001F5D7":
             self.wm_state('normal')
             self.maximize.config(text=u"\U0001F5D6")

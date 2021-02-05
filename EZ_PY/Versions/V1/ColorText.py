@@ -4,14 +4,10 @@ import tkinter.filedialog
 import keyword
 import builtins
 import re
-# import time
 # from code import InteractiveInterpreter
 import json
 from ctypes import windll
 from LineNumberCanvas import LineNumberCanvas
-# from idlelib.parenmatch import ParenMatch
-# from idlelib.autocomplete import AutoComplete
-# from idlelib.config import idleConf
 
 
 # class StdoutRedirector(object):
@@ -53,6 +49,7 @@ class ColorText(Text):
         self.binding_keys()
         self.up_date()
         self.toggle_highlight()
+        self.linenum_width()
 
         with open('importable_modules', 'w') as imp_mods:
             for i in self.module_list:
@@ -99,13 +96,12 @@ class ColorText(Text):
         self.bind('<Home>', self.on_home)
         self.bind('<Control-Home>', self.on_ctrl_home)
         self.bind('<Shift-Home>', self.on_shift_home)
-        self.bind('<<Paste>>', lambda _: self.after(100, self.on_paste))
         self.bind('<Delete>', self.on_delete)
         self.bind('<<NextChar>>', self.on_next_char)
         self.bind('<<PrevChar>>', self.on_prev_char)
         # self.bind('<F5>', self.execute)
         # self.bind('<<Selection>>', self.on_select)     <=
-        self.bind('<<Paste>>', lambda _=None: self.after(100, self.on_paste))
+        self.bind('<<Paste>>', lambda _=None: self.after(12, self.on_paste))
         # self.bind('<<NextPara>>', on_para_change)      <=
 
     def __list(self) -> list:
@@ -1028,15 +1024,18 @@ class ColorText(Text):
             print(' - rClickbinder, something wrong')
             pass
 
+    def linenum_width(self, event=None):
+        if self.linenumbers.temp is not None:
+            self.linenumbers.configure(width=len(self.linenumbers.temp.split('.')[0])*10+5, bg=self.theme[1])
+        self.after(10, self.linenum_width)
 
-    def up_date(self, event=None, with_trigger=False):
+    def up_date(self, event=None):
         with open('config.json') as _file:
             self.config_dict = json.load(_file)
         self.theme = self.config_dict['themes'][self.config_dict['selected_theme']].split('.')
         self.config(fg=self.theme[0], bg=self.theme[1], insertbackground=self.theme[2])
         #           tabs=str(0.95*(int(self.config_dict['tab_length'])/4))+'c')
-        if self.linenumbers.temp is not None:
-            self.linenumbers.configure(width=len(self.linenumbers.temp.split('.')[0])*10+5, bg=self.theme[1])
+        
         # self.linenumbers.id.config(fill=self.theme[0])
         # print(self.dlineinfo(INSERT))
 

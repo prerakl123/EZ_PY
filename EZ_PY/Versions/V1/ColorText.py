@@ -105,7 +105,7 @@ class ColorText(Text):
         self.bind('<<PrevChar>>', self.on_prev_char)
         # self.bind('<F5>', self.execute)
         # self.bind('<<Selection>>', self.on_select)     <=
-        self.bind('<<Paste>>', lambda _=None: self.after(500, self.on_paste))
+        self.bind('<<Paste>>', lambda _=None: self.after(100, self.on_paste))
         # self.bind('<<NextPara>>', on_para_change)      <=
 
     def __list(self) -> list:

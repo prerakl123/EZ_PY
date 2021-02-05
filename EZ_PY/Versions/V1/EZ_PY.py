@@ -10,6 +10,7 @@ from HandyConsole import Console as TextConsole
 from ColorText import ColorText
 from ThemeSelection import ThemeWin
 from Tooltip import ToolTip
+from idlelib.parenmatch import *
 
 
 # json configuration file
@@ -41,6 +42,8 @@ class CustomNotebook(ttk.Notebook):
         #         imp_mods.write(i+'\n')
 
         # binding key events
+
+        self.enable_traversal()
         self.bind("<ButtonPress-1>", self.on_close_press, True)
         self.bind("<ButtonRelease-1>", self.on_close_release)
         self.bind('<Control-O>', self.open_file)
@@ -140,27 +143,28 @@ class CustomNotebook(ttk.Notebook):
             self.py_files.append(1)
             self.add(ctt, text=fn)
         else:
-            def dragwin(event):
+            def dragwin(evt):
                 x = new_win.winfo_pointerx() - _offsetx
                 y = new_win.winfo_pointery() - _offsety
                 new_win.geometry('+{x}+{y}'.format(x=x, y=y))
 
-            def clickwin(event):
+            def clickwin(evt):
                 nonlocal _offsetx, _offsety
-                _offsetx = event.x + event.widget.winfo_rootx() - new_win.winfo_rootx()
-                _offsety = event.y + event.widget.winfo_rooty() - new_win.winfo_rooty()
+                _offsetx = evt.x + evt.widget.winfo_rootx() - new_win.winfo_rootx()
+                _offsety = evt.y + evt.widget.winfo_rooty() - new_win.winfo_rooty()
 
             def ok():
-                fn = name_entry.get()
+                fn2 = name_entry.get()
                 ctt.pack(side=TOP, fill=BOTH, expand=YES)
                 PyMenuBar(self, ctt.colortext)
                 self.py_files.append(1)
-                self.create_file(fn)
-                self.add(ctt, text=fn)
+                self.create_file(fn2)
+                self.add(ctt, text=fn2)
                 new_win.destroy()
 
-            def cancel(event=None):
+            def cancel(evt=None):
                 new_win.destroy()
+                self.select_new_tab()
 
             new_win = Toplevel(self.master, bg='gray84')
             new_win.geometry(f'200x110+{int(new_win.winfo_screenheight()*0.25)}+'
@@ -176,7 +180,8 @@ class CustomNotebook(ttk.Notebook):
 
             name_entry = Entry(new_win, font='Consolas 12')
             name_entry.pack(side=TOP, fill=X, ipady=5)
-            name_entry.bind('<FocusIn>', lambda _: ToolTip(name_entry, 'Consolas 13', 'File name with extension.', follow=False))
+            name_entry.bind('<FocusIn>', lambda _: ToolTip(name_entry, 'Consolas 13', 'File name with extension.',
+                                                           follow=False))
 
             ok_btn = Button(new_win, font='Consolas 10', text='OK', bd=0, width=10, command=ok)
             ok_btn.pack(side=LEFT, padx=10)
@@ -265,16 +270,17 @@ class CustomNotebook(ttk.Notebook):
 
     def select_new_tab(self, event=None):
         """Opens a window for selection of opening of new window"""
+        self.update()
 
-        def dragwin(event):
+        def dragwin(evt):
             x = sf_root.winfo_pointerx() - _offsetx
             y = sf_root.winfo_pointery() - _offsety
             sf_root.geometry('+{x}+{y}'.format(x=x, y=y))
 
-        def clickwin(event):
+        def clickwin(evt):
             nonlocal _offsetx, _offsety
-            _offsetx = event.x + event.widget.winfo_rootx() - sf_root.winfo_rootx()
-            _offsety = event.y + event.widget.winfo_rooty() - sf_root.winfo_rooty()
+            _offsetx = evt.x + evt.widget.winfo_rootx() - sf_root.winfo_rootx()
+            _offsety = evt.y + evt.widget.winfo_rooty() - sf_root.winfo_rooty()
 
         sf_root = Toplevel(self.master, bg='gray84')
         sf_root.geometry(f'200x130+{int(sf_root.winfo_screenheight()*0.25)}+'
@@ -292,6 +298,8 @@ class CustomNotebook(ttk.Notebook):
         sf_root_name = Label(sf_root_top_frame, text='Create File', font='Consolas 11', anchor=CENTER, bg='gray75',
                              width=11)
         sf_root_name.pack(side=LEFT, anchor=W)
+        sf_root_name.bind('<Button-1>', clickwin)
+        sf_root_name.bind('<B1-Motion>', dragwin)
 
         exit_lbl = Label(sf_root_top_frame, text='✕', font='Consolas 12', anchor=CENTER, bg='gray75', width=2)
         exit_lbl.pack(side=LEFT, expand=YES, anchor=E, ipadx=10)
@@ -299,33 +307,33 @@ class CustomNotebook(ttk.Notebook):
         exit_lbl.bind('<Enter>', lambda a: exit_lbl.config(fg='white', bg='red'))
         exit_lbl.bind('<Leave>', lambda a: exit_lbl.config(fg='black', bg='gray75'))
 
-        new_lbl = Label(sf_root, text='+ Py File', font='Consolas 13', bg='gray84', cursor='hand2',
-                        width=15)
-        new_lbl.pack(side=TOP)
-        new_lbl.bind('<ButtonRelease-1>', self.add_py_tab)
-        new_lbl.bind('<Enter>', lambda a: new_lbl.config(fg='orange', bg='light blue'))
-        new_lbl.bind('<Leave>', lambda a: new_lbl.config(fg='black', bg='gray84'))
+        py_lbl = Label(sf_root, text='+ Py File', font='Consolas 13', bg='gray84', cursor='hand2',
+                       width=15)
+        py_lbl.pack(side=TOP)
+        py_lbl.bind('<ButtonRelease-1>', lambda _=None: [self.add_py_tab(_), sf_root.destroy()])
+        py_lbl.bind('<Enter>', lambda a: py_lbl.config(fg='orange', bg='light blue'))
+        py_lbl.bind('<Leave>', lambda a: py_lbl.config(fg='black', bg='gray84'))
 
         console_lbl = Label(sf_root, text='+ New Console', font='Consolas 13', bg='gray84', cursor='hand2',
                             width=15)
         console_lbl.pack(side=TOP)
-        console_lbl.bind('<ButtonRelease-1>', self.add_console_tab)
+        console_lbl.bind('<ButtonRelease-1>', lambda _=None: [self.add_console_tab(), sf_root.destroy()])
         console_lbl.bind('<Enter>', lambda a: console_lbl.config(fg='orange', bg='light blue'))
         console_lbl.bind('<Leave>', lambda a: console_lbl.config(fg='black', bg='gray84'))
 
-        open_lbl = Label(sf_root, text='+ Text File', font=('Consolas 13'), bg='gray84', cursor='hand2',
-                         width=15)
-        open_lbl.pack(side=TOP)
-        open_lbl.bind('<ButtonRelease-1>', self.add_file_tab)
-        open_lbl.bind('<Enter>', lambda a: open_lbl.config(fg='orange', bg='light blue'))
-        open_lbl.bind('<Leave>', lambda a: open_lbl.config(fg='black', bg='gray84'))
+        txt_lbl = Label(sf_root, text='+ Text File', font=('Consolas 13'), bg='gray84', cursor='hand2',
+                        width=15)
+        txt_lbl.pack(side=TOP)
+        txt_lbl.bind('<ButtonRelease-1>', lambda _=None: [self.add_file_tab(_), sf_root.destroy()])
+        txt_lbl.bind('<Enter>', lambda a: txt_lbl.config(fg='orange', bg='light blue'))
+        txt_lbl.bind('<Leave>', lambda a: txt_lbl.config(fg='black', bg='gray84'))
 
-        open_md_lbl = Label(sf_root, text='+ README.md', font='Consolas 13', bg='gray84', cursor='hand2',
-                            width=15)
-        open_md_lbl.pack(side=TOP)
-        open_md_lbl.bind('<ButtonRelease-1>', self.add_md)
-        open_md_lbl.bind('<Enter>', lambda a: open_md_lbl.config(fg='orange', bg='light blue'))
-        open_md_lbl.bind('<Leave>', lambda a: open_md_lbl.config(fg='black', bg='gray84'))
+        md_lbl = Label(sf_root, text='+ README.md', font='Consolas 13', bg='gray84', cursor='hand2',
+                       width=15)
+        md_lbl.pack(side=TOP)
+        md_lbl.bind('<ButtonRelease-1>', lambda _=None: [self.add_md(_), sf_root.destroy()])
+        md_lbl.bind('<Enter>', lambda a: md_lbl.config(fg='orange', bg='light blue'))
+        md_lbl.bind('<Leave>', lambda a: md_lbl.config(fg='black', bg='gray84'))
 
         sf_root.bind('<KeyPress-Escape>', lambda a: exit_lbl.config(fg='white', bg='red'))
         sf_root.bind('<KeyRelease-Escape>', lambda a: sf_root.destroy())
@@ -593,7 +601,7 @@ class PyMenuBar:
         file_menu.add_command(label='Open', accelerator='Ctrl+O', command=lambda: self.master.open_file())
         file_menu.add_command(label='Save', accelerator='Ctrl+S', command=lambda: text_widget.master.save())
         file_menu.add_command(label='Save As', accelerator='Ctrl+Shift+S', command=lambda: text_widget.master.save_as())
-        file_menu.add_command(label='Exit', accelerator='Alt+F4', command=lambda: root.destroy())
+        file_menu.add_command(label='Exit', accelerator='Alt+F4', command=lambda: self.master.destroy())
         menubar.add_cascade(label='File', menu=file_menu)
         edit_menu = Menu(menubar, tearoff=0)
         edit_menu.add_command(label='Copy', accelerator='Ctrl+C', command=lambda: menubar.event_generate("<<Copy>>"))
@@ -619,7 +627,7 @@ class MenuBar:
         file_menu.add_command(label='Open', accelerator='Ctrl+O', command=lambda: widget.master.open_file())
         file_menu.add_command(label='Save', accelerator='Ctrl+S', command=lambda: widget.master.save())
         file_menu.add_command(label='Save As', accelerator='Ctrl+Shift+S', command=lambda: widget.master.save_as())
-        file_menu.add_command(label='Exit', accelerator='Alt+F4', command=lambda: root.destroy())
+        file_menu.add_command(label='Exit', accelerator='Alt+F4', command=lambda: self.master.destroy())
         menubar.add_cascade(label='File', menu=file_menu)
         edit_menu = Menu(menubar, tearoff=0)
         edit_menu.add_command(label='Copy', accelerator='Ctrl+C', command=lambda: menubar.event_generate("<<Copy>>"))
@@ -630,7 +638,7 @@ class MenuBar:
         menubar.add_cascade(label='Edit', menu=edit_menu)
         config_menu = Menu(menubar, tearoff=0)
         config_menu.add_command(label='Find', accelerator='Ctrl+F', command=widget.master.find_text)
-        config_menu.add_command(label='Replace', accelerator='Ctrl+H', command=widget.master._replace)
+        config_menu.add_command(label='Replace', accelerator='Ctrl+H', command=widget.master.re_place)
         menubar.add_cascade(label='Config', menu=config_menu)
         self.master.master.config(menu=menubar)
 
@@ -643,6 +651,7 @@ def main():
     root = Tk()
     root.minsize(400, 400)
     root.geometry('700x600+40+0')
+    root.title('EZ_PY')
 
     config_frame = Frame(root, bd=1, highlightthickness=1, highlightbackground='black')
     config_frame.pack(side=LEFT, fill=Y)
@@ -661,12 +670,14 @@ def main():
     root.bind('<Control-Shift-n>', ez_py.add_py_tab)
     root.bind('<Control-T>', theme_settings)
     root.bind('<Control-t>', theme_settings)
-    add.bind('<Enter>', lambda a=None, b=None: [add.config(fg='orange'), ToolTip(add, 'Consolas 9', 'Create a new file', follow=False)])
+    add.bind('<Enter>', lambda a=None, b=None: [add.config(fg='orange'),
+                                                ToolTip(add, 'Consolas 9', 'Create a new file', follow=False)])
     add.bind('<Leave>', lambda a=None: add.config(fg='blue'))
     add.bind('<Button-1>', ez_py.select_new_tab)
     add.bind('<Control-Shift-n>', ez_py.select_new_tab)
     add.bind('<Control-Shift-N>', ez_py.select_new_tab)
-    themes.bind('<Enter>', lambda a=None, b=None: [themes.config(fg='orange'), ToolTip(themes, 'Consolas 9', 'Theme Settings', follow=False)])
+    themes.bind('<Enter>', lambda a=None, b=None: [themes.config(fg='orange'),
+                                                   ToolTip(themes, 'Consolas 9', 'Theme Settings', follow=False)])
     themes.bind('<Leave>', lambda a=None: themes.config(fg='blue'))
     themes.bind('<Button-1>', lambda e: theme_settings(e, root=root))
     ez_py.focus_force()

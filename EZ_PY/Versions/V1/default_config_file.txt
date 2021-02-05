@@ -19,106 +19,351 @@
         "High Contrast": "#FFFFFF.#000000.#FFFFFF"
     },
     "selected_theme": "High Contrast",
-    "text_color": {
-        "comment": {
-            "Default": "#dd0000",
-            "Greygarious": "",
-            "Aquamarine": "",
-            "Bold Beige": "",
-            "Cobalt Blue": "",
-            "Olive Green": "",
-            "Night Mode": "",
-            "High Contrast": "#00ffff"
+    "highlight_current_line": true,
+    "text_theme_settings": {
+        "Default": {
+            "hcl_color": "gray84",
+            "comment": [
+                "#dd0000",
+                "italic"
+            ],
+            "builtin": [
+                "#ff00ff",
+                "normal"
+            ],
+            "string": [
+                "#089e08",
+                "normal"
+            ],
+            "keyword": [
+                "#cf8300",
+                "italic"
+            ],
+            "numbers": [
+                "#0044ff",
+                "normal"
+            ],
+            "special": [
+                "#441191",
+                "normal"
+            ],
+            "bracket": [
+                "#915703",
+                "normal"
+            ],
+            "modules": [
+                "#00ffb1",
+                "normal"
+            ],
+            "dunder": [
+                "#ff47af",
+                "italic"
+            ],
+            "link": [
+                "blue",
+                "italic"
+            ]
         },
-        "builtin": {
-            "Default": "#ff00ff",
-            "Greygarious": "",
-            "Aquamarine": "",
-            "Bold Beige": "",
-            "Cobalt Blue": "",
-            "Olive Green": "",
-            "Night Mode": "",
-            "High Contrast": "#9162fc"
+        "Greygarious": {
+            "hcl_color": "",
+            "comment": [
+                "",
+                "italic"
+            ],
+            "builtin": [
+                "",
+                "normal"
+            ],
+            "string": [
+                "",
+                "normal"
+            ],
+            "keyword": [
+                "",
+                "italic"
+            ],
+            "numbers": [
+                "",
+                "normal"
+            ],
+            "special": [
+                "",
+                "normal"
+            ],
+            "bracket": [
+                "",
+                "normal"
+            ],
+            "modules": [
+                "",
+                "normal"
+            ],
+            "dunder": [
+                "",
+                "italic"
+            ],
+            "link": [
+                "blue",
+                "italic"
+            ]
         },
-        "string": {
-            "Default": "#089e08",
-            "Greygarious": "",
-            "Aquamarine": "",
-            "Bold Beige": "",
-            "Cobalt Blue": "",
-            "Olive Green": "",
-            "Night Mode": "",
-            "High Contrast": "#1aff00"
+        "Aquamarine": {
+            "hcl_color": "",
+            "comment": [
+                "",
+                "italic"
+            ],
+            "builtin": [
+                "",
+                "normal"
+            ],
+            "string": [
+                "",
+                "normal"
+            ],
+            "keyword": [
+                "",
+                "italic"
+            ],
+            "numbers": [
+                "",
+                "normal"
+            ],
+            "special": [
+                "",
+                "normal"
+            ],
+            "bracket": [
+                "",
+                "normal"
+            ],
+            "modules": [
+                "",
+                "normal"
+            ],
+            "dunder": [
+                "",
+                "italic"
+            ],
+            "link": [
+                "blue",
+                "italic"
+            ]
         },
-        "keyword": {
-            "Default": "#cf8300",
-            "Greygarious": "",
-            "Aquamarine": "",
-            "Bold Beige": "",
-            "Cobalt Blue": "",
-            "Olive Green": "",
-            "Night Mode": "",
-            "High Contrast": "#ff5500"
+        "Bold Beige": {
+            "hcl_color": "",
+            "comment": [
+                "",
+                "italic"
+            ],
+            "builtin": [
+                "",
+                "normal"
+            ],
+            "string": [
+                "",
+                "normal"
+            ],
+            "keyword": [
+                "",
+                "italic"
+            ],
+            "numbers": [
+                "",
+                "normal"
+            ],
+            "special": [
+                "",
+                "normal"
+            ],
+            "bracket": [
+                "",
+                "normal"
+            ],
+            "modules": [
+                "",
+                "normal"
+            ],
+            "dunder": [
+                "",
+                "italic"
+            ],
+            "link": [
+                "blue",
+                "italic"
+            ]
         },
-        "numbers": {
-            "Default": "#0044ff",
-            "Greygarious": "",
-            "Aquamarine": "",
-            "Bold Beige": "",
-            "Cobalt Blue": "",
-            "Olive Green": "",
-            "Night Mode": "",
-            "High Contrast": "#00ffcd"
+        "Cobalt Blue": {
+            "hcl_color": "",
+            "comment": [
+                "",
+                "italic"
+            ],
+            "builtin": [
+                "",
+                "normal"
+            ],
+            "string": [
+                "",
+                "normal"
+            ],
+            "keyword": [
+                "",
+                "italic"
+            ],
+            "numbers": [
+                "",
+                "normal"
+            ],
+            "special": [
+                "",
+                "normal"
+            ],
+            "bracket": [
+                "",
+                "normal"
+            ],
+            "modules": [
+                "",
+                "normal"
+            ],
+            "dunder": [
+                "",
+                "italic"
+            ],
+            "link": [
+                "blue",
+                "italic"
+            ]
         },
-        "special": {
-            "Default": "#441191",
-            "Greygarious": "",
-            "Aquamarine": "",
-            "Bold Beige": "",
-            "Cobalt Blue": "",
-            "Olive Green": "",
-            "Night Mode": "",
-            "High Contrast": "#ff4455"
+        "Olive Green": {
+            "hcl_color": "",
+            "comment": [
+                "",
+                "italic"
+            ],
+            "builtin": [
+                "",
+                "normal"
+            ],
+            "string": [
+                "",
+                "normal"
+            ],
+            "keyword": [
+                "",
+                "italic"
+            ],
+            "numbers": [
+                "",
+                "normal"
+            ],
+            "special": [
+                "",
+                "normal"
+            ],
+            "bracket": [
+                "",
+                "normal"
+            ],
+            "modules": [
+                "",
+                "normal"
+            ],
+            "dunder": [
+                "",
+                "italic"
+            ],
+            "link": [
+                "blue",
+                "italic"
+            ]
         },
-        "bracket": {
-            "Default": "#915703",
-            "Greygarious": "",
-            "Aquamarine": "",
-            "Bold Beige": "",
-            "Cobalt Blue": "",
-            "Olive Green": "",
-            "Night Mode": "",
-            "High Contrast": "#5f5c5a"
+        "Night Mode": {
+            "hcl_color": "",
+            "comment": [
+                "",
+                "italic"
+            ],
+            "builtin": [
+                "",
+                "normal"
+            ],
+            "string": [
+                "",
+                "normal"
+            ],
+            "keyword": [
+                "",
+                "italic"
+            ],
+            "numbers": [
+                "",
+                "normal"
+            ],
+            "special": [
+                "",
+                "normal"
+            ],
+            "bracket": [
+                "",
+                "normal"
+            ],
+            "modules": [
+                "",
+                "normal"
+            ],
+            "dunder": [
+                "",
+                "italic"
+            ],
+            "link": [
+                "blue",
+                "italic"
+            ]
         },
-        "modules": {
-            "Default": "#00ffb1",
-            "Greygarious": "",
-            "Aquamarine": "",
-            "Bold Beige": "",
-            "Cobalt Blue": "",
-            "Olive Green": "",
-            "Night Mode": "",
-            "High Contrast": "#d3ed3e"
-        },
-        "dunder": {
-            "Default": "#ff47af",
-            "Greygarious": "",
-            "Aquamarine": "",
-            "Bold Beige": "",
-            "Cobalt Blue": "",
-            "Olive Green": "",
-            "Night Mode": "",
-            "High Contrast": "#f562e9"
-        },
-        "link": {
-            "Default": "blue",
-            "Greygarious": "blue",
-            "Aquamarine": "blue",
-            "Bold Beige": "blue",
-            "Cobalt Blue": "blue",
-            "Olive Green": "blue",
-            "Night Mode": "blue",
-            "High Contrast": "blue"
+        "High Contrast": {
+            "hcl_color": "gray8",
+            "comment": [
+                "#00ffff",
+                "italic"
+            ],
+            "builtin": [
+                "#9162fc",
+                "normal"
+            ],
+            "string": [
+                "#1aff00",
+                "normal"
+            ],
+            "keyword": [
+                "#ff5500",
+                "italic"
+            ],
+            "numbers": [
+                "#00ffcd",
+                "normal"
+            ],
+            "special": [
+                "#ff4455",
+                "normal"
+            ],
+            "bracket": [
+                "#5f5c5a",
+                "normal"
+            ],
+            "modules": [
+                "#d3ed3e",
+                "normal"
+            ],
+            "dunder": [
+                "#f562e9",
+                "italic"
+            ],
+            "link": [
+                "blue",
+                "italic"
+            ]
         }
     }
 }

@@ -1,5 +1,5 @@
 from tkinter import *
-import tkinter as tk
+import json
 
 
 class LineNumberCanvas(Canvas):
@@ -18,7 +18,7 @@ class LineNumberCanvas(Canvas):
         self.delete('all')  # To prevent drawing over the previous canvas
 
         self.temp = self.text_widget.index("@0, 0")
-        while True :
+        while True:
             dline = self.text_widget.dlineinfo(self.temp)
             if dline is None: 
                 break
@@ -26,7 +26,8 @@ class LineNumberCanvas(Canvas):
             x = dline[0]
             linenum = str(self.temp).split(".")[0]
 
-            self.id = self.create_text(2, y, anchor="nw", text=linenum, font='Consolas 13')
+            self.id = self.create_text(2, y, anchor="nw", text=linenum, font='Consolas 13',
+                                       fill=self.text_widget.theme[0])
 
             if int(linenum) in self.breakpoints:                
                 x1, y1, x2, y2 = self.bbox(self.id)
@@ -36,7 +37,7 @@ class LineNumberCanvas(Canvas):
             self.temp = self.text_widget.index("%s+1line" % self.temp)
 
     def get_breakpoint_number(self, event):
-         if self.find_withtag('current'):
+        if self.find_withtag('current'):
             i = self.find_withtag('current')[0]
             linenum = int(self.itemcget(i, 'text'))
 
@@ -45,7 +46,3 @@ class LineNumberCanvas(Canvas):
             else:
                 self.breakpoints.append(linenum)
             self.re_render()
-
-    def get_last_number(self, event=None):
-        x = self.bbox('current')
-        # print(x)

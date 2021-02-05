@@ -4,11 +4,14 @@ import tkinter.filedialog
 import keyword
 import builtins
 import re
-import time
+# import time
 # from code import InteractiveInterpreter
 import json
 from ctypes import windll
 from LineNumberCanvas import LineNumberCanvas
+# from idlelib.parenmatch import ParenMatch
+# from idlelib.autocomplete import AutoComplete
+# from idlelib.config import idleConf
 
 
 # class StdoutRedirector(object):
@@ -49,10 +52,16 @@ class ColorText(Text):
         self._set_()
         self.binding_keys()
         self.up_date()
+        self.toggle_highlight()
+
+        with open('importable_modules', 'w') as imp_mods:
+            for i in self.module_list:
+                if ' ' not in i and '{' not in i and '}' not in i:
+                    imp_mods.write(i+'\n')
 
         self.textfilter = re.compile(self.sort_regex(), re.S)
 
-        self.after(2000, self.color_code_block)
+        # self.after(2000, self.color_code_block)
 
         self.bind('<Control-Shift-N>', self.new_file)
         self.bind('<Control-Shift-n>', self.new_file)
@@ -62,8 +71,8 @@ class ColorText(Text):
         self.bind('<Control-s>', self.save)
         self.bind('<Control-f>', self.find_text)
         self.bind('<Control-F>', self.find_text)
-        self.bind('<Control-H>', self._replace)
-        self.bind('<Control-h>', self._replace)
+        self.bind('<Control-H>', self.re_place)
+        self.bind('<Control-h>', self.re_place)
         self.bind('<Control-z>', self.undo_event)
         self.bind('<Control-Z>', self.undo_event)
         self.bind('<Control-r>', self.redo_event)
@@ -92,9 +101,11 @@ class ColorText(Text):
         self.bind('<Shift-Home>', self.on_shift_home)
         self.bind('<<Paste>>', lambda _: self.after(100, self.on_paste))
         self.bind('<Delete>', self.on_delete)
+        self.bind('<<NextChar>>', self.on_next_char)
+        self.bind('<<PrevChar>>', self.on_prev_char)
         # self.bind('<F5>', self.execute)
         # self.bind('<<Selection>>', self.on_select)     <=
-        # self.bind('<<Paste>>', on_paste)               <=     TO BE CREATED
+        self.bind('<<Paste>>', lambda _=None: self.after(500, self.on_paste))
         # self.bind('<<NextPara>>', on_para_change)      <=
 
     def __list(self) -> list:
@@ -105,9 +116,9 @@ class ColorText(Text):
         in_modules = sys.modules.keys()
         modules = list(modules+list(in_modules))
         for i in modules:
-            if '[' in i or ']' in i or '(' in i or ')' in i:
+            if '[' in i or ']' in i or '(' in i or ')' in i or '{' in i or '}' in i:
                 modules.pop(modules.index(i))
-        return modules
+        return sorted(modules)
 
 #        try:
 #            import os
@@ -177,68 +188,98 @@ class ColorText(Text):
 
     def undo_event(self, event=None):
         self.event_generate('<<Undo>>')
-        self.edit_undo()
+        # self.edit_undo()
+        self.inst_trigger()
+        return 'break'
 
     def redo_event(self, event=None):
         self.event_generate('<<Redo>>')
-        self.edit_redo()
+        # self.edit_redo()
+        self.inst_trigger()
+        return 'break'
 
     def autocomplete(self, val):
         if val == '(':
             self.insert(INSERT, ')')
             self.mark_set(INSERT,
                           f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) - 1}")
+            self.current_bracket()
+            
         elif val == '{':
             self.insert(INSERT, '}')
             self.mark_set(INSERT,
                           f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) - 1}")
+            self.current_bracket()
+            
         elif val == '[':
             self.insert(INSERT, ']')
             self.mark_set(INSERT,
                           f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) - 1}")
-        elif val == '<':
-            self.insert(INSERT, '>')
-            self.mark_set(INSERT,
-                          f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) - 1}")
+            self.current_bracket()
+            
+        # elif val == '<':
+            # self.insert(INSERT, '>')
+            # self.mark_set(INSERT,
+        # f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) - 1}")
+            
         elif val == ')':
             if self.get(self.index(INSERT),
                         f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) + 1}") == ')':
                 self.mark_set(INSERT,
                               f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) + 1}")
+                self.current_bracket()
                 # re.match(r'\s*\([^)]+\)', self.get("insert linestart", "insert lineend"))
+                
             else:
+                self.current_bracket()
                 return ')'
+            
             return 'break'
+        
         elif val == '}':
             if self.get(self.index(INSERT),
                         f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) + 1}") == '}':
                 self.mark_set(INSERT,
                               f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) + 1}")
+                self.current_bracket()
+                
             else:
+                self.current_bracket()
                 return '}'
+            
             return 'break'
+        
         elif val == ']':
             if self.get(self.index(INSERT),
                         f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) + 1}") == ']':
                 self.mark_set(INSERT,
                               f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) + 1}")
+                self.current_bracket()
+                
             else:
+                self.current_bracket()
                 return ']'
+            
             return 'break'
-        elif val == '>':
-            if self.get(self.index(INSERT),
-                        f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) + 1}") == '>':
-                self.mark_set(INSERT,
-                              f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) + 1}")
-            else:
-                return '>'
-            return 'break'
+        
+        # elif val == '>':
+            # if self.get(self.index(INSERT),
+        # f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) + 1}") == '>':
+            # self.mark_set(INSERT,
+        # f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) + 1}")
+
+            # else:
+            # return '>'
+            
+            # return 'break'
+        
         elif val == '"':
             if self.get(self.index(INSERT),
                         f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) + 1}") == '"':
                 self.mark_set(INSERT,
                               f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) + 1}")
                 return 'break'
+            
             else:
                 if \
                         self.get(f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) - 1}",
@@ -255,6 +296,7 @@ class ColorText(Text):
                 self.mark_set(INSERT,
                               f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) + 1}")
                 return 'break'
+            
             else:
                 if \
                         self.get(f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1])-1}",
@@ -266,6 +308,14 @@ class ColorText(Text):
                         INSERT, f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) - 1}")
 
         return
+
+    def current_bracket(self):
+        start_char = (self.index(INSERT), self.index(INSERT+'+1c'))
+        end_char = (self.index(INSERT+'-1c'), self.index(INSERT))
+        self.tag_add('bracket', start_char[0], start_char[1])
+        self.tag_add('bracket', end_char[0], end_char[1])
+        self.tag_config('bracket', )
+        # print(self.index(INSERT+'-1c'), self.index(INSERT), self.index(INSERT+'+1c'))
 
     def check_paren(self, string):
         open_list = ["[", "{", "("]
@@ -289,6 +339,7 @@ class ColorText(Text):
             return False
 
     def find_indent(self, string, value=4) -> dict:
+        """returns indent level and spaces for single line `string` value"""
         indent_spaces = 0
         for i in string:
             if i.isspace():
@@ -297,34 +348,84 @@ class ColorText(Text):
                 break
         return {'spaces': indent_spaces, 'level': indent_spaces//value}
 
+    def toggle_highlight(self, event=None):
+        select = self.tag_ranges(SEL)
+        # print(select, len(select))
+        if len(select) > 0:
+            self.highlight_current_line(False)
+            return
+        self.highlight_current_line(self.config_dict['highlight_current_line'])
+
+    def highlight_current_line(self, event=None):
+        if event is True:
+            self.tag_remove('active_line', '1.0', END)
+            self.tag_add('active_line', 'insert linestart', 'insert lineend+1c')
+            self.tag_config(
+                'active_line', background=self.config_dict['text_theme_settings'][
+                    self.config_dict['selected_theme']]['hcl_color'])
+            self.after(25, self.toggle_highlight)
+        else:
+            self.tag_remove('active_line', 1.0, END)
+            self.after(25, self.toggle_highlight)
+
     def on_return(self, event=None):
         prev_line = self.get(f"{int(self.index(INSERT).split('.')[0])}.0", INSERT)
         # after_line = self.get(INSERT, INSERT+' lineend')
         prev_indent = int(self.find_indent(prev_line, value=self.config_dict['tab_length'])['spaces'])
+        # print(self.index('1.0 lineend'))
 
         if prev_line.rstrip('\t').rstrip(' ').endswith(':') and not prev_line.rstrip('\t').rstrip(' ').startswith('#'):
             self.insert(INSERT, '\n')
-            self.insert(f"{int(self.index(INSERT).split('.')[0])+1}.0",
+            self.insert(f"{int(self.index(INSERT).split('.')[0])}.0",
                         ' '*(prev_indent+self.config_dict['tab_length']))  # +after_line)
             self.see(INSERT)
             return 'break'
 
-        elif (r'[return]' in prev_line or r'[pass]' in prev_line or r'[continue]' in prev_line) and \
-                self.check_paren(prev_line) is True:
+        elif len(prev_line) > 0 and prev_line[-1] in ['(', '[', '{']:
+
+            if self.get(INSERT, f"{int(self.index(INSERT).split('.')[0])}."
+                                f"{int(self.index(INSERT).split('.')[1])+1}") in [')', ']', '}']:
+                self.insert(INSERT, '\n')
+                self.insert(INSERT, ' '*(prev_indent+self.config_dict['tab_length']))
+                self.insert(INSERT, '\n')
+                self.mark_set(INSERT, f"{int(self.index(INSERT).split('.')[0])-1}.0 lineend")
+            else:
+                self.insert(INSERT, '\n')
+                self.insert(f"{int(self.index(INSERT).split('.')[0])}.0",
+                            ' '*(prev_indent+self.config_dict['tab_length']))
+            self.see(INSERT)
+            return 'break'
+
+        # elif prev_line[-1] in [')', ']', '}']:
+            # if prev_indent
+
+        elif len(prev_line) > 0 and prev_line[-1] in [',', '\\']:
+            ind = prev_line.rfind('(') or prev_line.rfind('[') or prev_line.rfind('{')
+            if ind > 0:
+                self.insert(INSERT, '\n')
+                self.insert(INSERT, ' '*(ind+1))
+            else:
+                self.insert(INSERT, '\n')
+                self.insert(INSERT, ' '*prev_indent)
+            self.see(INSERT)
+            return 'break'
+
+        elif 'return' in prev_line or 'pass' in prev_line or 'continue' in prev_line or \
+             'yield' in prev_line:
             self.insert(INSERT, '\n')
-            self.insert(f"{int(self.index(INSERT).split('.')[0])+1}.0",
+            self.insert(f"{int(self.index(INSERT).split('.')[0])}.0",
                         ' '*(prev_indent-self.config_dict['tab_length']))
             self.see(INSERT)
             return 'break'
 
         elif self.check_paren(prev_line) is True:
             self.insert(INSERT, '\n')
-            self.insert(f"{int(self.index(INSERT).split('.')[0])+1}.0", ' '*(prev_indent))
+            self.insert(f"{int(self.index(INSERT).split('.')[0])}.0", ' '*(prev_indent))
             self.see(INSERT)
             return 'break'
         else:
             self.insert(INSERT, '\n')
-            self.insert(f"{int(self.index(INSERT).split('.')[0])+1}.0", ' '*(prev_indent))
+            self.insert(f"{int(self.index(INSERT).split('.')[0])}.0", ' '*(prev_indent))
             self.see(INSERT)
             return 'break'
 
@@ -381,7 +482,7 @@ class ColorText(Text):
             if self.get(f"{cur_ind.split('.')[0]}.0", f"{cur_ind.split('.')[0]}.3") == '>>>':
                 if int(cur_ind.split('.')[1]) > 4:
                     if len(on_select) > 0:
-                        self.delete('sel.first', 'self.last')
+                        self.delete('sel.first', 'sel.last')
                         return 'break'
                     self.delete(one_less_char_ind, cur_ind)
                     return 'break'
@@ -448,6 +549,16 @@ class ColorText(Text):
         self.see(INSERT)
         # return 'break'
 
+    def on_next_char(self, event):
+        cur_char = self.get(self.index(INSERT), self.index(INSERT+'+1c'))
+        next_char = self.get(self.index(INSERT+'+1c'), self.index(INSERT+'+2c'))
+        # print(cur_char, next_char)
+
+    def on_prev_char(self, event):
+        # cur_char = self.get(self.index(INSERT), self.index(INSERT+'+1c'))
+        prev_char = self.get(self.index(INSERT+'-1c'), self.index(INSERT))
+        # print(cur_char, prev_char)
+
     def find_text(self, event=None):
         search_toplevel = Toplevel(self.root)
         search_toplevel.title('Find Text')
@@ -494,7 +605,7 @@ class ColorText(Text):
         search_box.focus_set()
         search_toplevel.title('{} matches found'.format(matches_found))
 
-    def _replace(self, event=None):
+    def re_place(self, event=None):
         replace_toplevel = Toplevel(self.root)
         replace_toplevel.title('Find and Replace Text')
         replace_toplevel.transient(self.root)
@@ -608,13 +719,19 @@ class ColorText(Text):
         return "(?P<%s>" % name + "|".join(alternates) + ")"
 
     def sort_regex(self):
+        """Returns a compiled list of all the regex alternates for group pattern matching"""
+
+        # Regex for list of Python keywords
         kw = r"\b" + self._any("KEYWORD", keyword.kwlist) + r"\b"
 
-        builtinlist = [str(name) for name in dir(builtins) if not name.startswith('_')]
+        # Regex for list of Python built-in functions
+        builtinlist = [str(name) for name in dir(builtins) if not name.startswith('_') and name not in keyword.kwlist]
         builtin = r"([^.'\"\\#]\b|^)" + self._any("BUILTIN", builtinlist) + r"\b"
 
-        comment = self._any("COMMENT", [r"#[^\n]*"])
+        # Regex for comments
+        comment = self._any("COMMENT", [r"#[^\n]*|@[^ ][^\n][^ ]*"])
 
+        # Regex for Python strings
         stringprefix = r"(\bB|b|br|Br|bR|BR|rb|rB|Rb|RB|r|u|R|U|f|F|fr|Fr|fR|FR|rf|rF|Rf|RF)?"
         sqstring = stringprefix + r"'[^'\\\n]*(\\.[^'\\\n]*)*'?"
         dqstring = stringprefix + r'"[^"\\\n]*(\\.[^"\\\n]*)*"?'
@@ -622,20 +739,24 @@ class ColorText(Text):
         dq3string = stringprefix + r'"""[^"\\]*((\\.|"(?!""))[^"\\]*)*(""")?'
         string = self._any("STRING", [sq3string, dq3string, sqstring, dqstring])
 
-        numbers = self._any("NUMBERS", [r'[-+]?(?:\b[0-9]+(?:\.[0-9]*)?|\.[0-9]+\b)(?:[eE][-+]?[0-9]+\b)?'])
+        # Regex for natural, exponential, decimal, hexadecimal numbers
+        numbers = self._any(
+            "NUMBERS", [r'\b[-+]?(?:\b[0-9]+(?:\.[0-9]*)?|\.[0-9]+\b)(?:[eE][-+]?[0-9]+\b)?|(?:[0x|0X][a-fA-F0-9]+)\b'])
 
+        # Regex for special characters
         speciallist = ['=', '@', '-', ':', '<', '>', r'[+]', r'[*]', r'[.]', r'[!]', r'[%]', r'[\\]']
         special = self._any("SPECIAL", speciallist)
 
+        # Regex for brackets
         bracketlist = [r'[(]', r'[)]', r'[{]', r'[}]', r'[[]', r'[]]']
         bracket = self._any("BRACKET", bracketlist)
 
-        decorators = self._any("DECORATORS", [r"@[^\n]*"])
-
         # definitions = self._any("CLASSDEF", [r"(\bdef|class)?[^'\\\n]*(\\.[^'\\\n]*)*(:\b)?"])
 
+        # Regex for module list on a system
         modules = r"([^.'\"\\#]\b|^)" + self._any('MODULES', self.module_list) + r"\b"
 
+        # Regex for Python dunders or double underlined keywords
         dunder_list = ['__abs__', '__add__', '__and__', '__bool__', '__ceil__', '__class__', '__contains__',
                        '__delattr__', '__delitem__', '__dir__', '__divmod__', '__doc__', '__eq__', '__float__',
                        '__floor__', '__floordiv__', '__format__', '__ge__', '__getattribute__', '__getitem__',
@@ -655,10 +776,11 @@ class ColorText(Text):
         # URL_REGEX = r"""(?i)\b((?:https?:(?:/{1,3}|[a-z0-9%])|[a-z0-9.\-]+[.](?:com|net|org|edu|gov|mil|aero|asia|biz|cat|coop|info|int|jobs|mobi|museum|name|post|pro|tel|travel|xxx|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cs|cu|cv|cx|cy|cz|dd|de|dj|dk|dm|do|dz|ec|ee|eg|eh|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|mm|mn|mo|mp|mq|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|om|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ro|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|Ja|sk|sl|sm|sn|so|sr|ss|st|su|sv|sx|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw)/)(?:[^\s()<>{}\[\]]+|\([^\s()]*?\([^\s()]+\)[^\s()]*?\)|\([^\s]+?\))+(?:\([^\s()]*?\([^\s()]+\)[^\s()]*?\)|\([^\s]+?\)|[^\s`!()\[\]{};:\'\".,<>?])|(?:(?<!@)[a-z0-9]+(?:[.\-][a-z0-9]+)*[.](?:com|net|org|edu|gov|mil|aero|asia|biz|cat|coop|info|int|jobs|mobi|museum|name|post|pro|tel|travel|xxx|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cs|cu|cv|cx|cy|cz|dd|de|dj|dk|dm|do|dz|ec|ee|eg|eh|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|mm|mn|mo|mp|mq|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|om|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ro|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|Ja|sk|sl|sm|sn|so|sr|ss|st|su|sv|sx|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw)\b/?(?!@)))"""
         # link = self._any("LINK", [URL_REGEX])
 
-        return kw + "|" + builtin + "|" + comment + "|" + string + "|" + numbers + '|' + special + '|' + decorators + \
-            '|' + bracket + '|' + modules + '|' + dunder + '|' + self._any("SYNC", [r"\n"])
+        return kw + "|" + builtin + "|" + comment + '|' + string + "|" + numbers + '|' + special + '|' + bracket +\
+            '|' + modules + '|' + dunder + '|' + self._any("SYNC", [r"\n"])
 
     def _coordinate(self, start, end, string):
+        """Returns indices of the start and end of matched `string`"""
         srow = string[:start].count('\n') + 1
         scolsplitlines = string[:start].split('\n')
 
@@ -697,50 +819,78 @@ class ColorText(Text):
         return '{}.{}'.format(srow, scol), '{}.{}'.format(lrow, lcol)
 
     def check(self, k: dict):
+        font = list(self.config_dict['color_text_font'])
         if k['COMMENT'] is not None:
-            return 'comment', self.config_dict['text_color']['comment'][self.config_dict['selected_theme']]
+            return (
+                'comment', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['comment'][0],
+                f"{font[0]} {font[1]}" +
+                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['comment'][1]}")
 
         elif k['BUILTIN'] is not None:
-            return 'builtin', self.config_dict['text_color']['builtin'][self.config_dict['selected_theme']]
+            return (
+                'builtin', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['builtin'][0],
+                f"{font[0]} {font[1]}" +
+                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['builtin'][1]}")
 
         elif k['STRING'] is not None:
-            return 'string', self.config_dict['text_color']['string'][self.config_dict['selected_theme']]
+            return (
+                'string', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['string'][0],
+                f"{font[0]} {font[1]}" +
+                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['string'][1]}")
 
         elif k['KEYWORD'] is not None:
-            return 'keyword', self.config_dict['text_color']['keyword'][self.config_dict['selected_theme']]
+            return (
+                'keyword', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['keyword'][0],
+                f"{font[0]} {font[1]}" +
+                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['keyword'][1]}")
 
         elif k['NUMBERS'] is not None:
-            return 'numbers', self.config_dict['text_color']['numbers'][self.config_dict['selected_theme']]
+            return (
+                'numbers', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['numbers'][0],
+                f"{font[0]} {font[1]}" +
+                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['numbers'][1]}")
 
         elif k['SPECIAL'] is not None:
-            return 'special', self.config_dict['text_color']['special'][self.config_dict['selected_theme']]
+            return (
+                'special', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['special'][0],
+                f"{font[0]} {font[1]}" +
+                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['special'][1]}")
+
 
         elif k['BRACKET'] is not None:
-            return 'bracket', self.config_dict['text_color']['bracket'][self.config_dict['selected_theme']]
+            return (
+                'bracket', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['bracket'][0],
+                f"{font[0]} {font[1]}" +
+                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['bracket'][1]}")
 
         elif k['MODULES'] is not None:
-            return 'modules', self.config_dict['text_color']['modules'][self.config_dict['selected_theme']]
+            return (
+                'modules', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['modules'][0],
+                f"{font[0]} {font[1]}" +
+                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['modules'][1]}")
 
         elif k['DUNDER'] is not None:
-            return 'dunder', self.config_dict['text_color']['dunder'][self.config_dict['selected_theme']]
+            return (
+                'dunder', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['dunder'][0],
+                f"{font[0]} {font[1]}" +
+                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['dunder'][1]}")
 
         # elif k['CLASSDEF'] is not None:
         #     return 'classdef', '#0000ff'
 
         # elif k['LINK'] is not None:
-        #     return 'link', self.config_dict['text_color']['link'][self.config_dict['selected_theme']]
-
+        #     return (
+        #         'link', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['link'][0],
+        #         f"{font[0]} {font[1]}" +
+        #         f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['link'][1]}")
         else:
-            return 'ss', 'NILL'
+            return 'ss', 'NILL', 'NILL'
 
     def binding_functions_configuration(self):
         self.storeobj['ColorLight'] = self.trigger
         return
 
     def trigger(self, event=None):
-        if event.keysym in ('Up', 'Down'):
-            return
-
         val = self.get(INSERT + ' linestart', INSERT + ' lineend')
         # print(val, self.text.index(INSERT+' linestart'), self.text.index(INSERT+' lineend'))
         if len(val) == 1:
@@ -752,19 +902,19 @@ class ColorText(Text):
         for i in self.textfilter.finditer(val):
             start = i.start()
             end = i.end() - 1
-            tagtype, color = self.check(k=i.groupdict())
-            # print(tagtype, 'start:', start, 'end:', end)
+            tagtype, color, font_style = self.check(k=i.groupdict())
+            # print(tagtype, color, font_style)
             if color != 'NILL':
                 ind1, ind2 = self._coordinate(start=start, end=end, string=val)
                 self.tag_add(tagtype,
                              f"{int(self.index(INSERT).split('.')[0])}.{str(ind1).split('.')[1]}",
                              f"{int(self.index(INSERT).split('.')[0])}.{str(ind2).split('.')[1]}")
-                self.tag_config(tagtype, foreground=color)
+                self.tag_config(tagtype, foreground=color, font=font_style)
                 # print('tagtype:', tagtype, 'ind1:', ind1, 'ind2:', ind2, 'start:', start, 'end:', end, 'val:',val)
 
     def color_code_block(self, event=None):
         pass
-    
+
     def inst_trigger(self, event=None, start='1.0', stop=END):
         val = self.get(start, stop)
         if len(val) == 1:
@@ -774,13 +924,14 @@ class ColorText(Text):
             self.tag_remove(start, stop)
 
         for i in self.textfilter.finditer(val):
-            start = i.start()
+            _start = i.start()
             end = i.end() - 1
-            tagtype, color = self.check(k=i.groupdict())
+            tagtype, color, font_style = self.check(k=i.groupdict())
+            # print(tagtype, color, font_style)
             if color != 'NILL':
-                ind1, ind2 = self._coordinate(start=start, end=end, string=val)
+                ind1, ind2 = self._coordinate(start=_start, end=end, string=val)
                 self.tag_add(tagtype, ind1, ind2)
-                self.tag_config(tagtype, foreground=color)
+                self.tag_config(tagtype, foreground=color, font=font_style)
             # self.tag_bind('link', '<Control-Button-1>', self.open_link)
             # self.tag_bind('link', '<Double-1>', self.open_link)
             # self.tag_configure('link', underline=1, foreground='#0000ff')
@@ -878,14 +1029,17 @@ class ColorText(Text):
             pass
 
 
-    def up_date(self, event=None):
+    def up_date(self, event=None, with_trigger=False):
         with open('config.json') as _file:
             self.config_dict = json.load(_file)
         self.theme = self.config_dict['themes'][self.config_dict['selected_theme']].split('.')
         self.config(fg=self.theme[0], bg=self.theme[1], insertbackground=self.theme[2])
         #           tabs=str(0.95*(int(self.config_dict['tab_length'])/4))+'c')
         if self.linenumbers.temp is not None:
-            self.linenumbers.configure(width=len(self.linenumbers.temp.split('.')[0])*10+5)
+            self.linenumbers.configure(width=len(self.linenumbers.temp.split('.')[0])*10+5, bg=self.theme[1])
+        # self.linenumbers.id.config(fill=self.theme[0])
+        # print(self.dlineinfo(INSERT))
+
         self.after(1500, self.up_date)
 
 
@@ -895,13 +1049,14 @@ class TestApp(Tk):
         
         Tk.__init__(self, *args, **kwargs)
         self.overrideredirect(True)
-        self.minsize(193, 509)
+        self.minsize(193, 109)
         self.x = None
         self.y = None
 
         self.frame = Frame(self, bg='gray38')
         self.frame.pack(side=TOP, fill=X)
-        self.name = Label(self.frame, text='Color Text', font='Consolas 11', bg=self.frame.cget('background'), fg='white')
+        self.name = Label(self.frame, text='Color Text', font='Consolas 11',
+                          bg=self.frame.cget('background'), fg='white')
         self.name.pack(side=LEFT, fill=X, anchor=CENTER)
         self.close = Button(self.frame, text='✕', bd=0, width=3, font='Consolas 13',
                             command=lambda: self.destroy(), bg=self.frame.cget('background'))
@@ -918,19 +1073,19 @@ class TestApp(Tk):
         h_scroll = Scrollbar(self, orient=HORIZONTAL)
         self.grip = ttk.Sizegrip(self.scroll_frame)
 
-        self.s = ColorText(self, wrap=NONE, yscrollcommand=v_scroll.set, xscrollcommand=h_scroll.set)
-        
-        v_scroll.config(command=self.s.yview)
-        h_scroll.config(command=self.s.xview)
+        self.text = ColorText(self, wrap=NONE, yscrollcommand=v_scroll.set, xscrollcommand=h_scroll.set)
+
+        v_scroll.config(command=self.text.yview)
+        h_scroll.config(command=self.text.xview)
 
         self.scroll_frame.pack(side=RIGHT, fill=Y)
         v_scroll.pack(side=TOP, fill=Y, expand=Y)
         self.grip.pack(side=BOTTOM)
-        self.s.pack(side=TOP, expand=TRUE, fill=BOTH)
+        self.text.pack(side=TOP, expand=TRUE, fill=BOTH)
         h_scroll.pack(side=BOTTOM, fill=X)
         
         # self.grip.lift(self.label)
-        self.grip.bind("<B1-Motion>", self.OnMotion)
+        self.grip.bind("<B1-Motion>", self.onmotion)
 
         self.call('encoding', 'system', 'utf-8')
 
@@ -966,14 +1121,14 @@ class TestApp(Tk):
         y = self.winfo_y() + deltay
         self.geometry(f"+{x}+{y}")
 
-    def OnMotion(self, event):
+    def onmotion(self, event):
         self.wm_state('normal')
         self.maximize.config(text=u"\U0001F5D6")
         x1 = self.winfo_pointerx()
         y1 = self.winfo_pointery()
         x0 = self.winfo_rootx()
         y0 = self.winfo_rooty()
-        self.geometry("%sx%s" % ((x1-x0),(y1-y0)))
+        self.geometry("%sx%s" % ((x1-x0), (y1-y0)))
         return
 
     def minimize_win(self, event=None):
@@ -1014,5 +1169,5 @@ if __name__ == '__main__':
     app.tk.call('tk', 'windowingsystem')
     app.after(10, lambda: set_appwindow(root=app))
     app.focus_force()
-    app.s.focus_force()
+    app.text.focus_force()
     app.mainloop()

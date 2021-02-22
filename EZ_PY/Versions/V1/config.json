@@ -9,16 +9,16 @@
     ],
     "tab_length": 4,
     "themes": {
-        "Default": "#000000.#FFFFFF.#000000",
-        "Greygarious": "#83406A.#D1D4D1.#FFFFFF",
-        "Aquamarine": "#5B8340.#D1E7E0.#FFFFFF",
-        "Bold Beige": "#4B4620.#FFF0E1.#000000",
-        "Cobalt Blue": "#ffffBB.#3333aa.#FFFFFF",
-        "Olive Green": "#D1E7E0.#5B8340.#FFFFFF",
-        "Night Mode": "#FFFFFF.gray20.#FFFFFF",
-        "High Contrast": "#FFFFFF.#000000.#FFFFFF"
+        "Default": "#000000.#FFFFFF.#000000.#00AAFF.gray70",
+        "Greygarious": "#83406A.#D1D4D1.#868686.#5268A1.gray70",
+        "Aquamarine": "#5B8340.#D1E7E0.#5B806B.#88AA66.gray75",
+        "Bold Beige": "#4B4620.#FFF0E1.#000000.#0000FF.gray70",
+        "Cobalt Blue": "#ffffBB.#3333aa.#FFFFFF.#0000FF.gray70",
+        "Olive Green": "#D1E7E0.#5B8340.#FFFFFF.#99BB66.gray70",
+        "Night Mode": "#FFFFFF.gray20.#FFFFFF.#0000FF.gray50",
+        "High Contrast": "#FFFFFF.#000000.#FFFFFF.#0000FF.gray20"
     },
-    "selected_theme": "High Contrast",
+    "selected_theme": "Aquamarine",
     "highlight_current_line": true,
     "text_theme_settings": {
         "Default": {
@@ -65,7 +65,7 @@
             ]
         },
         "Greygarious": {
-            "hcl_color": "",
+            "hcl_color": "#AAAAAA",
             "comment": [
                 "",
                 "italic"
@@ -108,7 +108,7 @@
             ]
         },
         "Aquamarine": {
-            "hcl_color": "",
+            "hcl_color": "#9FE3BC",
             "comment": [
                 "",
                 "italic"

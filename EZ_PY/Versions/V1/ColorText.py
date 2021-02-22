@@ -30,7 +30,8 @@ class ColorText(Text):
             self.config_dict = json.load(file)
         self.config(font=self.config_dict['color_text_font'])
         self.theme = self.config_dict['themes'][self.config_dict['selected_theme']].split('.')
-        self.config(fg=self.theme[0], bg=self.theme[1], insertbackground=self.theme[2], undo=1)
+        self.config(fg=self.theme[0], bg=self.theme[1], insertbackground=self.theme[2],
+                    undo=1, selectbackground=self.theme[3])
         #            tabs=str(0.95*(int(self.config_dict['tab_length'])/4))+'c')
 
         self.linenumbers = LineNumberCanvas(self.master, width=15)
@@ -61,19 +62,12 @@ class ColorText(Text):
         # self.after(2000, self.color_code_block)
 
         self.bind('<Control-Shift-N>', self.new_file)
-        self.bind('<Control-Shift-n>', self.new_file)
-        self.bind('<Control-O>', self.open_file)
         self.bind('<Control-o>', self.open_file)
-        self.bind('<Control-S>', self.save)
         self.bind('<Control-s>', self.save)
         self.bind('<Control-f>', self.find_text)
-        self.bind('<Control-F>', self.find_text)
-        self.bind('<Control-H>', self.re_place)
-        self.bind('<Control-h>', self.re_place)
+        self.bind('<Control-r>', self.re_place)
         self.bind('<Control-z>', self.undo_event)
-        self.bind('<Control-Z>', self.undo_event)
-        self.bind('<Control-r>', self.redo_event)
-        self.bind('<Control-R>', self.redo_event)
+        self.bind('<Control-Shift-Z>', self.redo_event)
         self.bind('<KeyPress-bracketleft>', lambda a: self.autocomplete(val='['))
         self.bind('<KeyPress-braceleft>', lambda a: self.autocomplete(val='{'))
         self.bind('<KeyPress-parenleft>', lambda a: self.autocomplete(val='('))
@@ -84,6 +78,7 @@ class ColorText(Text):
         self.bind('<KeyPress-quotedbl>', lambda a: self.autocomplete(val='"'))
         self.bind('<KeyPress-less>', lambda a: self.autocomplete(val='<'))
         self.bind('<KeyPress-greater>', lambda a: self.autocomplete(val='>'))
+        self.bind('<KeyPress-colon>', lambda a: self.autocomplete(val=':'))
         self.bind('<KeyPress-BackSpace>', self.on_bkspace)
         self.bind('<KeyRelease>', self.trigger)
         self.bind('<Tab>', self.on_tab)
@@ -100,7 +95,8 @@ class ColorText(Text):
         self.bind('<<NextChar>>', self.on_next_char)
         self.bind('<<PrevChar>>', self.on_prev_char)
         # self.bind('<F5>', self.execute)
-        # self.bind('<<Selection>>', self.on_select)     <=
+        self.bind('<<Selection>>', self.on_select)
+        self.bind('<<SelectNone>>', self.on_select_remove)
         self.bind('<<Paste>>', lambda _=None: self.after(12, self.on_paste))
         # self.bind('<<NextPara>>', on_para_change)      <=
 
@@ -303,6 +299,13 @@ class ColorText(Text):
                     self.mark_set(
                         INSERT, f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) - 1}")
 
+        elif val == ':':
+            if self.get(self.index(INSERT),
+                        f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) + 1}") == ":":
+                self.mark_set(INSERT,
+                              f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) + 1}")
+                return 'break'
+
         return
 
     def current_bracket(self):
@@ -384,16 +387,17 @@ class ColorText(Text):
                 self.insert(INSERT, '\n')
                 self.insert(INSERT, ' '*(prev_indent+self.config_dict['tab_length']))
                 self.insert(INSERT, '\n')
+                self.insert(INSERT, ' '*prev_indent)
                 self.mark_set(INSERT, f"{int(self.index(INSERT).split('.')[0])-1}.0 lineend")
             else:
                 self.insert(INSERT, '\n')
                 self.insert(f"{int(self.index(INSERT).split('.')[0])}.0",
                             ' '*(prev_indent+self.config_dict['tab_length']))
+                if self.get(self.index('insert lineend-1c'), self.index('insert lineend')) in [')', '}', ']']:
+                    self.insert(self.index('insert lineend-1c'), '\n')
+                    self.insert(self.index('insert lineend+1c'), ' '*prev_indent)
             self.see(INSERT)
             return 'break'
-
-        # elif prev_line[-1] in [')', ']', '}']:
-            # if prev_indent
 
         elif len(prev_line) > 0 and prev_line[-1] in [',', '\\']:
             ind = prev_line.rfind('(') or prev_line.rfind('[') or prev_line.rfind('{')
@@ -407,7 +411,7 @@ class ColorText(Text):
             return 'break'
 
         elif 'return' in prev_line or 'pass' in prev_line or 'continue' in prev_line or \
-             'yield' in prev_line:
+             'yield' in prev_line or 'break' in prev_line:
             self.insert(INSERT, '\n')
             self.insert(f"{int(self.index(INSERT).split('.')[0])}.0",
                         ' '*(prev_indent-self.config_dict['tab_length']))
@@ -459,35 +463,14 @@ class ColorText(Text):
         self.insert(INSERT, ' '*self.config_dict['tab_length'])
         return 'break'
 
-    def on_bkspace(self, event, usage='textbox'):
-        """:params: event: parameter for backspace event list
-                    usage: if usage='console' some of the
-                           backspace events will be unbound"""
+    def on_bkspace(self, event):
+        """:params: event: parameter for backspace event list"""
         cur_ind = str(self.index(INSERT))
         one_less_char = self.get(f"{int(cur_ind.split('.')[0])}.{int(cur_ind.split('.')[1])-1}", INSERT)
         one_less_char_ind = f"{int(cur_ind.split('.')[0])}.{int(cur_ind.split('.')[1])-1}"
         one_more_char = self.get(INSERT, f"{int(cur_ind.split('.')[0])}.{int(cur_ind.split('.')[1])+1}")
         one_more_char_ind = f"{int(cur_ind.split('.')[0])}.{int(cur_ind.split('.')[1])+1}"
         open_bracs, close_bracs = ['{', '[', '('], ['}', ']', ')']
-        try:
-            on_select = self.get('sel.first', 'sel.last')
-        except Exception as exc:
-            on_select = ''
-
-        if 'console' in usage.lower():
-            if self.get(f"{cur_ind.split('.')[0]}.0", f"{cur_ind.split('.')[0]}.3") == '>>>':
-                if int(cur_ind.split('.')[1]) > 4:
-                    if len(on_select) > 0:
-                        self.delete('sel.first', 'sel.last')
-                        return 'break'
-                    self.delete(one_less_char_ind, cur_ind)
-                    return 'break'
-                else:
-                    return 'break'
-            elif int(cur_ind.split('.')[0]) == 1:
-                return 'break'
-            elif int(cur_ind.split('.')[0]) < int(self.search('>>>', END, backwards=True).split('.')[0]):
-                return 'break'
 
         if one_less_char in ['"', "'"]:
             if one_more_char == one_less_char:
@@ -511,29 +494,15 @@ class ColorText(Text):
         self.delete(f"{cur_ind.split('.')[0]}.{str(int(cur_ind.split('.')[1]) - del_chars)}", self.index(INSERT))
         return 'break'
 
-    def on_delete(self, event, usage='textbox'):
-        """:params: event: parameter for delete event list
-                    usage: if usage='console' some of the
-                           backspace events will be unbound"""
-        cur_ind = str(self.index(INSERT))
-        one_less_char = self.get(f"{int(cur_ind.split('.')[0])}.{int(cur_ind.split('.')[1]) - 1}", INSERT)
-        one_less_char_ind = f"{int(cur_ind.split('.')[0])}.{int(cur_ind.split('.')[1]) - 1}"
-        one_more_char = self.get(INSERT, f"{int(cur_ind.split('.')[0])}.{int(cur_ind.split('.')[1]) + 1}")
-        one_more_char_ind = f"{int(cur_ind.split('.')[0])}.{int(cur_ind.split('.')[1]) + 1}"
-        open_bracs, close_bracs = ['{', '[', '('], ['}', ']', ')']
-
-        if 'console' in usage.lower():
-            if self.get(f"{cur_ind.split('.')[0]}.0", f"{cur_ind.split('.')[0]}.3") == '>>>':
-                if int(cur_ind.split('.')[1]) > 4:
-                    self.delete(cur_ind, one_more_char_ind)
-                    return 'break'
-                else:
-                    return 'break'
-            elif int(cur_ind.split('.')[0]) in [1, 2]:
-                return 'break'
-            elif int(cur_ind.split('.')[0]) < int(self.search('>>>', END, backwards=True).split('.')[0]):
-                return 'break'
-
+    def on_delete(self, event):
+        """:params: event: parameter for delete event list"""
+        pass
+    #     cur_ind = str(self.index(INSERT))
+    #     one_less_char = self.get(f"{int(cur_ind.split('.')[0])}.{int(cur_ind.split('.')[1]) - 1}", INSERT)
+    #     one_less_char_ind = f"{int(cur_ind.split('.')[0])}.{int(cur_ind.split('.')[1]) - 1}"
+    #     one_more_char = self.get(INSERT, f"{int(cur_ind.split('.')[0])}.{int(cur_ind.split('.')[1]) + 1}")
+    #     one_more_char_ind = f"{int(cur_ind.split('.')[0])}.{int(cur_ind.split('.')[1]) + 1}"
+    #     open_bracs, close_bracs = ['{', '[', '('], ['}', ']', ')']
 
     def on_paste(self, event=None):
         # cur_ind = str(self.index(INSERT))
@@ -554,6 +523,33 @@ class ColorText(Text):
         # cur_char = self.get(self.index(INSERT), self.index(INSERT+'+1c'))
         prev_char = self.get(self.index(INSERT+'-1c'), self.index(INSERT))
         # print(cur_char, prev_char)
+
+    def on_select(self, event=None):
+        if self.tag_ranges(SEL) == ():
+            self.tag_remove('similar_selection', 1.0, END)
+            return
+        selected_text_ind = [self.tag_ranges(SEL)[0], self.tag_ranges(SEL)[1]]
+        selected_text = self.get(selected_text_ind[0], selected_text_ind[1])
+        if selected_text.strip() in ['', ' ', '\t', '\n']:
+            return
+        self.tag_remove('similar_selection', 1.0, END)
+        start_pos = '1.0'
+        while True:
+            start_pos = self.search(selected_text, start_pos, nocase=False, exact=True, stopindex=END)
+            if not start_pos:
+                break
+            end_pos = "{}+{}c".format(start_pos, len(selected_text))
+            self.tag_add('similar_selection', start_pos, end_pos)
+            if start_pos == selected_text_ind[0]:
+                pass
+            else:
+                start_pos = end_pos
+        self.tag_config('similar_selection', background=self.theme[4])
+        self.tag_remove('similar_selection', selected_text_ind[0], selected_text_ind[1])
+        self.tag_config(SEL, background=self.theme[3])
+
+    def on_select_remove(self, event=None):
+        self.tag_remove('similar_selection', 1.0, END)
 
     def find_text(self, event=None):
         search_toplevel = Toplevel(self.root)
@@ -645,6 +641,7 @@ class ColorText(Text):
                                                                              self, replace_toplevel, find_entry,
                                                                              regex_value.get()))
         replace_toplevel.protocol('WM_DELETE_WINDOW', close_search_window)
+        self.inst_trigger()
         return "break"
 
     def replace_output(self, _find, _replace, _text, ignore, replace_box, regex):
@@ -728,7 +725,7 @@ class ColorText(Text):
         comment = self._any("COMMENT", [r"#[^\n]*|@[^ ][^\n][^ ]*"])
 
         # Regex for Python strings
-        stringprefix = r"(\bB|b|br|Br|bR|BR|rb|rB|Rb|RB|r|u|R|U|f|F|fr|Fr|fR|FR|rf|rF|Rf|RF)?"
+        stringprefix = r"(\bB|b|br|Br|bR|BR|rb|rB|Rb|RB|r|u|R|U)?"
         sqstring = stringprefix + r"'[^'\\\n]*(\\.[^'\\\n]*)*'?"
         dqstring = stringprefix + r'"[^"\\\n]*(\\.[^"\\\n]*)*"?'
         sq3string = stringprefix + r"'''[^'\\]*((\\.|'(?!''))[^'\\]*)*(''')?"
@@ -737,7 +734,8 @@ class ColorText(Text):
 
         # Regex for natural, exponential, decimal, hexadecimal numbers
         numbers = self._any(
-            "NUMBERS", [r'\b[-+]?(?:\b[0-9]+(?:\.[0-9]*)?|\.[0-9]+\b)(?:[eE][-+]?[0-9]+\b)?|(?:[0x|0X][a-fA-F0-9]+)\b'])
+            "NUMBERS", [r'0(?:[0x|0X][a-fA-F0-9]+)|\b[-|+]?(?:\b[0-9]+(?:\.[0-9]*)?|\.[0-9]+\b)(?:[eE][-+]?[0-9]+\b)?\b'
+                        ])
 
         # Regex for special characters
         speciallist = ['=', '@', '-', ':', '<', '>', r'[+]', r'[*]', r'[.]', r'[!]', r'[%]', r'[\\]']
@@ -791,26 +789,6 @@ class ColorText(Text):
             lcolsplitlines = lcolsplitlines[len(lcolsplitlines) - 1]
 
         lcol = len(lcolsplitlines) + 1
-
-        return '{}.{}'.format(srow, scol), '{}.{}'.format(lrow, lcol)
-
-    def coordinate(self, pattern, string, text):
-        line = string.splitlines()
-        start = line.find(pattern)
-        end = start + len(pattern)
-        srow = string[:start].count('\n') + 1
-        scolsplitlines = string[:start].split('\n')
-
-        if len(scolsplitlines) != 0:
-            scolsplitlines = scolsplitlines[len(scolsplitlines) - 1]
-
-        scol = len(scolsplitlines)
-        lrow = string[:end + 1].count('\n') + 1
-        lcolsplitlines = string[:end].split('\n')
-
-        if len(lcolsplitlines) != 0:
-            lcolsplitlines = lcolsplitlines[len(lcolsplitlines) - 1]
-        lcol = len(lcolsplitlines)
 
         return '{}.{}'.format(srow, scol), '{}.{}'.format(lrow, lcol)
 

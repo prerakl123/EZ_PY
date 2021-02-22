@@ -11,6 +11,7 @@ from ColorText import ColorText
 from ThemeSelection import ThemeWin
 from Tooltip import ToolTip
 from idlelib.parenmatch import *
+from ttkthemes import ThemedTk
 
 
 # json configuration file
@@ -648,7 +649,8 @@ def theme_settings(event, root):
 
 
 def main():
-    root = Tk()
+    root = ThemedTk(fonts=True, themebg=True)
+    root.set_theme('arc')
     root.minsize(400, 400)
     root.geometry('700x600+40+0')
     root.title('EZ_PY')

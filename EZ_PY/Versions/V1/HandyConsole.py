@@ -18,7 +18,7 @@ class Console(tk.Frame):
 
         consolepath = os.path.join(os.path.dirname(__file__), "console.py")
 
-        self.p = subprocess.Popen(["python", consolepath], stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+        self.p = subprocess.Popen(["jupyter", "qtconsole"], stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                                   stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
 
         # make queues for keeping stdout and stderr whilst it is transferred between threads
@@ -40,22 +40,22 @@ class Console(tk.Frame):
 
         # key bindings for events
         self.ttytext.bind("<Return>", self.enter)
-        self.ttytext.bind('<BackSpace>', lambda _: self.ttytext.on_bkspace(_, usage='console'))
-        self.ttytext.bind('<Delete>', lambda _: self.ttytext.on_delete(_, usage='console'))
-        # self.ttytext.bind('<<Copy>>', self.on_copy)
-        # self.ttytext.bind('<<Paste>>', self.on_paste)
-        # self.ttytext.bind('<Control-c>', self.on_copy)
-        # self.ttytext.bind('<Control-v>', self.on_paste)
-        keylist = [f'<{chr(j)}>' for j in range(65, 91)] + [f'<{chr(j)}>' for j in range(97, 123)] + \
-                  ['<KP_Multiply>', '<KP_Divide>', '<KP_Add>', '<KP_Subtract>', '<KP_Decimal>', '<KP_Separator>'] + \
-                  [f'<KP_{j}>' for j in range(0, 10)] + ['<KP_Equal>', '<space>', '<exclam>', '<quotedbl>'] + \
-                  ['<numbersign>', '<dollar>', '<percent>', '<ampersand>', '<quoteright>', '<parenleft>',
-                   '<parenright>', '<asterisk>', '<plus>', '<comma>', '<minus>', '<period>', '<slash>', '<colon>',
-                   '<semicolon>', '<less>', '<equal>', '<greater>', '<question>', '<at>', '<bracketleft>',
-                   '<backslash>', '<bracketright>', '<asciicircum>', '<underscore>', '<quoteleft>', '<braceleft>',
-                   '<bar>', '<braceright>', '<asciitilde>', '<Tab>'] + [f'{j}' for j in range(0, 10)]
-        for i in keylist:
-            self.ttytext.bind(f'{i}', self.on_key)
+        self.ttytext.bind('<BackSpace>', self.on_bkspace)
+        self.ttytext.bind('<Delete>', self.on_delete)
+        self.ttytext.bind('<<Copy>>', self.on_copy)
+        self.ttytext.bind('<<Paste>>', self.on_paste)
+        self.ttytext.bind('<Control-c>', self.on_copy)
+        self.ttytext.bind('<Control-v>', self.on_paste)
+        # keylist = [f'<{chr(j)}>' for j in range(65, 91)] + [f'<{chr(j)}>' for j in range(97, 123)] + \
+        #           ['<KP_Multiply>', '<KP_Divide>', '<KP_Add>', '<KP_Subtract>', '<KP_Decimal>', '<KP_Separator>'] + \
+        #           [f'<KP_{j}>' for j in range(0, 10)] + ['<KP_Equal>', '<space>', '<exclam>', '<quotedbl>'] + \
+        #           ['<numbersign>', '<dollar>', '<percent>', '<ampersand>', '<quoteright>', '<parenleft>',
+        #            '<parenright>', '<asterisk>', '<plus>', '<comma>', '<minus>', '<period>', '<slash>', '<colon>',
+        #            '<semicolon>', '<less>', '<equal>', '<greater>', '<question>', '<at>', '<bracketleft>',
+        #            '<backslash>', '<bracketright>', '<asciicircum>', '<underscore>', '<quoteleft>', '<braceleft>',
+        #            '<bar>', '<braceright>', '<asciitilde>', '<Tab>'] + [f'{j}' for j in range(0, 10)]
+        # for i in keylist:
+            # self.ttytext.bind(f'{i}', self.on_key)
 
     def destroy(self):
         """This is the function that is automatically called when the widget is destroyed."""
@@ -70,27 +70,40 @@ class Console(tk.Frame):
     def enter(self, event):
         """The <Return> key press handler"""
         cur_ind = str(self.ttytext.index(tk.INSERT))
-        if int(cur_ind.split('.')[0]) < int(self.ttytext.search('>>>', tk.END, backwards=True).split('.')[0]):
+        if int(cur_ind.split('.')[0]) < int(self.ttytext.search(': ', tk.END, backwards=True).split('.')[0]):
             try:
                 selected = self.ttytext.get('sel.first', 'sel.last')
                 if len(selected) > 0:
                     self.ttytext.insert(tk.END, selected)
+                    self.ttytext.mark_set(tk.INSERT, tk.END)
+                    self.ttytext.see(tk.INSERT)
                     return 'break'
             except:
                 selected = self.ttytext.get(
-                    self.ttytext.search('>>>', tk.INSERT, backwards=True), tk.INSERT)
-                self.ttytext.insert(tk.END, selected.strip('>>> '))
+                    self.ttytext.search(': ', tk.INSERT, backwards=True), tk.INSERT)
+                self.ttytext.insert(tk.END, selected.strip(': '))
+                self.ttytext.mark_set(tk.INSERT, tk.END)
+                self.ttytext.see(tk.INSERT)
             return 'break'
         string = self.ttytext.get(1.0, tk.END)[self.line_start:]
         self.line_start += len(string)
         self.p.stdin.write(string.encode())
         self.p.stdin.flush()
 
+    def on_bkspace(self, event):
+        pass
+
+    def on_delete(self, event):
+        pass
+
     def on_key(self, event):
         """The typing control (<KeyRelease>) handler"""
         cur_ind = str(self.ttytext.index(tk.INSERT))
-        if int(cur_ind.split('.')[0]) < int(self.ttytext.search('>>>', tk.END, backwards=True).split('.')[0]):
-            return 'break'
+        try:
+            if int(cur_ind.split('.')[0]) < int(self.ttytext.search(r'In [0-9]?', tk.END, backwards=True).split('.')[0]):
+                return 'break'
+        except:
+            return
 
     def on_copy(self, event):
         """<Copy> event handler"""
@@ -128,6 +141,7 @@ class Console(tk.Frame):
         self.ttytext.insert(tk.END, string)
         self.ttytext.see(tk.END)
         self.line_start += len(string)
+        self.ttytext.inst_trigger()
 
 
 if __name__ == '__main__':

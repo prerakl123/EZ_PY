@@ -18,7 +18,7 @@
         "Night Mode": "#FFFFFF.gray20.#FFFFFF.#0000FF.gray50",
         "High Contrast": "#FFFFFF.#000000.#FFFFFF.#0000FF.gray20"
     },
-    "selected_theme": "Aquamarine",
+    "selected_theme": "High Contrast",
     "highlight_current_line": true,
     "text_theme_settings": {
         "Default": {

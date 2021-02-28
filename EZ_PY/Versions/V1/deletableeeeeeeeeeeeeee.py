@@ -1,13 +1,13 @@
-from idlelib.editor import EditorWindow, IndentSearcher
-from idlelib.autocomplete import AutoComplete
-from idlelib.textview import view_text, ViewFrame
-from idlelib.searchengine import SearchEngine, get
-from idlelib.sidebar import LineNumbers
-from idlelib.delegator import Delegator
-from idlelib.percolator import Percolator
-from idlelib.config import idleConf
-from tkinter import *
-import tokenize
+# from idlelib.editor import EditorWindow, IndentSearcher
+# from idlelib.autocomplete import AutoComplete
+# from idlelib.textview import view_text, ViewFrame
+# from idlelib.searchengine import SearchEngine, get
+# from idlelib.sidebar import LineNumbers
+# from idlelib.delegator import Delegator
+# from idlelib.percolator import Percolator
+# from idlelib.config import idleConf
+# from tkinter import *
+# import tokenize
 
 
 # root = Tk()
@@ -25,19 +25,19 @@ import tokenize
 # get(t)
 
 
-class Editwin:
-    def __init__(self, text):
-        self.text = text
-        self.text_frame = self.text.master
-        self.per = Percolator(text)
-        self.undo = Delegator()
-        self.per.insertfilter(self.undo)
-
-    def setvar(self, name, value):
-        pass
-
-    def getlineno(self, index):
-        return int(float(self.text.index(index)))
+# class Editwin:
+#     def __init__(self, text):
+#         self.text = text
+#         self.text_frame = self.text.master
+#         self.per = Percolator(text)
+#         self.undo = Delegator()
+#         self.per.insertfilter(self.undo)
+#
+#     def setvar(self, name, value):
+#         pass
+#
+#     def getlineno(self, index):
+#         return int(float(self.text.index(index)))
 
 
 # e = Editwin(t)
@@ -105,15 +105,125 @@ class Editwin:
 
 
 
-from tkinter import *
+# from tkinter import *
+#
+# root = Tk()
+# text = Text(root)
+# text.insert('1.0', 'This is a cruel is a world is a pakoda is a pani puri is a')
+# text.tag_add('isa', '1.1', '1.5')
+# text.tag_add('isa', '1.8', '1.10')
+# text.tag_add('isa', '1.14', '1.19')
+# text.tag_add('isa', '1.23', '1.30')
+# text.tag_config('isa', background='#00ff00', underline=True)
+# text.pack()
+# root.mainloop()
 
-root = Tk()
-text = Text(root)
-text.insert('1.0', 'This is a cruel is a world is a pakoda is a pani puri is a')
-text.tag_add('isa', '1.1', '1.5')
-text.tag_add('isa', '1.8', '1.10')
-text.tag_add('isa', '1.14', '1.19')
-text.tag_add('isa', '1.23', '1.30')
-text.tag_config('isa', background='#00ff00', underline=True)
-text.pack()
-root.mainloop()
+
+
+
+
+import tkinter.tix
+
+
+def runsample(w):
+    global root
+    root = w
+
+    # We use these options to set the sizes of the subwidgets inside the
+    # notebook, so that they are well-aligned on the screen.
+    prefix = tkinter.tix.OptionName(w)
+    if prefix:
+        prefix = '*'+prefix
+    else:
+        prefix = ''
+    w.option_add(prefix+'*TixControl*entry.width', 10)
+    w.option_add(prefix+'*TixControl*label.width', 18)
+    w.option_add(prefix+'*TixControl*label.anchor', tkinter.tix.E)
+    w.option_add(prefix+'*TixNoteBook*tagPadX', 8)
+
+    # Create the notebook widget and set its backpagecolor to gray.
+    # Note that the -backpagecolor option belongs to the "nbframe"
+    # subwidget.
+    nb = tkinter.tix.NoteBook(w, name='nb', ipadx=6, ipady=6)
+    nb['bg'] = 'gray'
+    nb.nbframe['backpagecolor'] = 'gray'
+
+    # Create the two tabs on the notebook. The -underline option
+    # puts a underline on the first character of the labels of the tabs.
+    # Keyboard accelerators will be defined automatically according
+    # to the underlined character.
+    nb.add('hard_disk', label="Hard Disk", underline=0)
+    nb.add('network', label="Network", underline=0)
+
+    nb.pack(expand=1, fill=tkinter.tix.BOTH, padx=5, pady=5, side=tkinter.tix.TOP)
+
+    # ----------------------------------------
+    # Create the first page
+    # ----------------------------------------
+    # Create two frames: one for the common buttons, one for the
+    # other widgets
+    #
+    tab = nb.hard_disk
+    f = tkinter.tix.Frame(tab)
+    common = tkinter.tix.Frame(tab)
+
+    f.pack(side=tkinter.tix.LEFT, padx=2, pady=2, fill=tkinter.tix.BOTH, expand=1)
+    common.pack(side=tkinter.tix.RIGHT, padx=2, fill=tkinter.tix.Y)
+
+    a = tkinter.tix.Control(f, value=12,   label='Access time: ')
+    w = tkinter.tix.Control(f, value=400,  label='Write Throughput: ')
+    r = tkinter.tix.Control(f, value=400,  label='Read Throughput: ')
+    c = tkinter.tix.Control(f, value=1021, label='Capacity: ')
+
+    a.pack(side=tkinter.tix.TOP, padx=20, pady=2)
+    w.pack(side=tkinter.tix.TOP, padx=20, pady=2)
+    r.pack(side=tkinter.tix.TOP, padx=20, pady=2)
+    c.pack(side=tkinter.tix.TOP, padx=20, pady=2)
+
+    # Create the common buttons
+    createcommonbuttons(common)
+
+    # ----------------------------------------
+    # Create the second page
+    # ----------------------------------------
+
+    tab = nb.network
+
+    f = tkinter.tix.Frame(tab)
+    common = tkinter.tix.Frame(tab)
+
+    f.pack(side=tkinter.tix.LEFT, padx=2, pady=2, fill=tkinter.tix.BOTH, expand=1)
+    common.pack(side=tkinter.tix.RIGHT, padx=2, fill=tkinter.tix.Y)
+
+    a = tkinter.tix.Control(f, value=12,   label='Access time: ')
+    w = tkinter.tix.Control(f, value=400,  label='Write Throughput: ')
+    r = tkinter.tix.Control(f, value=400,  label='Read Throughput: ')
+    c = tkinter.tix.Control(f, value=1021, label='Capacity: ')
+    u = tkinter.tix.Control(f, value=10,   label='Users: ')
+
+    a.pack(side=tkinter.tix.TOP, padx=20, pady=2)
+    w.pack(side=tkinter.tix.TOP, padx=20, pady=2)
+    r.pack(side=tkinter.tix.TOP, padx=20, pady=2)
+    c.pack(side=tkinter.tix.TOP, padx=20, pady=2)
+    u.pack(side=tkinter.tix.TOP, padx=20, pady=2)
+
+    createcommonbuttons(common)
+
+
+def dodestroy():
+    global root
+    root.destroy()
+
+
+def createcommonbuttons(master):
+    ok = tkinter.tix.Button(master, name='ok', text='OK', width=6, command=dodestroy)
+    cancel = tkinter.tix.Button(master, name='cancel', text='Cancel', width=6, command=dodestroy)
+
+    ok.pack(side=tkinter.tix.TOP, padx=2, pady=2)
+    cancel.pack(side=tkinter.tix.TOP, padx=2, pady=2)
+
+
+if __name__ == '__main__':
+    root = tkinter.tix.Tk()
+    runsample(root)
+    root.mainloop()

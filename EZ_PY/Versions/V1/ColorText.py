@@ -82,23 +82,25 @@ class ColorText(Text):
         self.bind('<KeyPress-BackSpace>', self.on_bkspace)
         self.bind('<KeyRelease>', self.trigger)
         self.bind('<Tab>', self.on_tab)
-        self.bind('<Control_R>', self.color_code_block)
-        self.bind('<Control_L>', self.color_code_block)
+        # self.bind('<Control_R>', self.color_code_block)
+        # self.bind('<Control_L>', self.color_code_block)
         self.bind('<Return>', self.on_return)
-        self.bind('<Shift_R>', self.color_code_block)
-        self.bind('<Shift_L>', self.color_code_block)
+        # self.bind('<Shift_R>', self.color_code_block)
+        # self.bind('<Shift_L>', self.color_code_block)
         self.bind('<Button-3>', self.r_click, add='')
         self.bind('<Home>', self.on_home)
         self.bind('<Control-Home>', self.on_ctrl_home)
         self.bind('<Shift-Home>', self.on_shift_home)
         self.bind('<Delete>', self.on_delete)
-        self.bind('<<NextChar>>', self.on_next_char)
-        self.bind('<<PrevChar>>', self.on_prev_char)
+        # self.bind('<<NextChar>>', self.on_next_char)
+        # self.bind('<<PrevChar>>', self.on_prev_char)
         # self.bind('<F5>', self.execute)
         self.bind('<<Selection>>', self.on_select)
         self.bind('<<SelectNone>>', self.on_select_remove)
         self.bind('<<Paste>>', lambda _=None: self.after(12, self.on_paste))
         # self.bind('<<NextPara>>', on_para_change)      <=
+        # self.after(4000, self.color_code_block)
+        self.bind('<FocusIn>', self.inst_trigger)
 
     def __list(self) -> list:
         modules = []
@@ -399,14 +401,24 @@ class ColorText(Text):
             self.see(INSERT)
             return 'break'
 
-        elif len(prev_line) > 0 and prev_line[-1] in [',', '\\']:
-            ind = prev_line.rfind('(') or prev_line.rfind('[') or prev_line.rfind('{')
+        elif len(prev_line) > 0 and prev_line.rstrip()[-1] in [',', '\\']:
+            ind = prev_line.rfind('(')
+            if ind < 0:
+                ind = prev_line.rfind('[')
+                if ind < 0:
+                    ind = prev_line.rfind('{')
             if ind > 0:
                 self.insert(INSERT, '\n')
-                self.insert(INSERT, ' '*(ind+1))
+                space_strip_text = self.get(INSERT, 'insert lineend')
+                self.delete(INSERT, 'insert lineend')
+                self.insert(INSERT, ' ' * (ind + 1) + space_strip_text.lstrip())
+                self.mark_set(INSERT, f'insert linestart+{ind+1}c')
             else:
                 self.insert(INSERT, '\n')
-                self.insert(INSERT, ' '*prev_indent)
+                space_strip_text = self.get(INSERT, 'insert lineend')
+                self.delete(INSERT, 'insert lineend')
+                self.insert(INSERT, ' ' * prev_indent + space_strip_text.lstrip())
+                self.mark_set(INSERT, f'insert linestart+{prev_indent}c')
             self.see(INSERT)
             return 'break'
 
@@ -414,7 +426,7 @@ class ColorText(Text):
              'yield' in prev_line or 'break' in prev_line:
             self.insert(INSERT, '\n')
             self.insert(f"{int(self.index(INSERT).split('.')[0])}.0",
-                        ' '*(prev_indent-self.config_dict['tab_length']))
+                        ' ' * (prev_indent - self.config_dict['tab_length']))
             self.see(INSERT)
             return 'break'
 
@@ -886,8 +898,21 @@ class ColorText(Text):
                 self.tag_config(tagtype, foreground=color, font=font_style)
                 # print('tagtype:', tagtype, 'ind1:', ind1, 'ind2:', ind2, 'start:', start, 'end:', end, 'val:',val)
 
-    def color_code_block(self, event=None):
-        pass
+    # def color_code_block(self, event=None):
+    #     self.update()
+    #     self.update_idletasks()
+    #     cur_ind = self.index(INSERT)
+    #     cur_ind_bbox = self.bbox(cur_ind)
+    #     self.event_generate('<<PrevPara>>')
+    #     prev_para_ind = self.index(INSERT)
+    #     self.event_generate('<<NextPara>>')
+    #     next_para_ind = self.index(INSERT)
+    #     self.inst_trigger(start=prev_para_ind, stop=next_para_ind)
+    #     self.mark_set(INSERT, cur_ind)
+    #     self.see(INSERT)
+    #     # print(cur_ind, prev_para_ind, next_para_ind)
+    #     # print(cur_ind_bbox)
+    #     self.after(5000, self.color_code_block)
 
     def inst_trigger(self, event=None, start='1.0', stop=END):
         val = self.get(start, stop)
@@ -908,7 +933,7 @@ class ColorText(Text):
                 self.tag_config(tagtype, foreground=color, font=font_style)
             # self.tag_bind('link', '<Control-Button-1>', self.open_link)
             # self.tag_bind('link', '<Double-1>', self.open_link)
-            # self.tag_configure('link', underline=1, foreground='#0000ff')
+            # self.tag_configure('link', foreground='#0000ff')
             # self.tag_raise('link', 'string')
             # self.tag_raise('link', 'comment')
         return 'break'

@@ -10,7 +10,6 @@ from HandyConsole import Console as TextConsole
 from ColorText import ColorText
 from ThemeSelection import ThemeWin
 from Tooltip import ToolTip
-from idlelib.parenmatch import *
 from ttkthemes import ThemedTk
 
 
@@ -47,11 +46,9 @@ class CustomNotebook(ttk.Notebook):
         self.enable_traversal()
         self.bind("<ButtonPress-1>", self.on_close_press, True)
         self.bind("<ButtonRelease-1>", self.on_close_release)
-        self.bind('<Control-O>', self.open_file)
         self.bind('<Control-o>', self.open_file)
         self.bind('<Control-F4>', lambda event: [self.on_close_press(event), self.on_close_release(event)])
-        self.bind('<Control-W>', self.on_cw_close)
-        self.bind('<Control-w>', self.on_cw_close)
+        self.bind('<Control-w>', self.close)
 
     def on_cw_close(self, event):
         self.event_generate('<<NotebookTabClosed>>')
@@ -59,10 +56,13 @@ class CustomNotebook(ttk.Notebook):
     def close(self, event):
         """Closes the notebook tab on position (x, y) of
         CustomNotebook widget"""
-        element = self.identify(event.x, event.y)
-        index = self.index("@%d,%d" % (event.x, event.y))
-        self.forget(index)
-        self.event_generate("<<NotebookTabClosed>>")
+        print(self.tab(self.select(), 'text'))
+        print(self.index('current'))
+        self.forget('current')
+        # element = self.identify(event.x, event.y)
+        # index = self.index("@%d,%d" % (event.x, event.y))
+        # self.forget(index)
+        # self.event_generate("<<NotebookTabClosed>>")
 
     def on_close_press(self, event):
         """Called when the button is pressed over the close button"""
@@ -191,6 +191,18 @@ class CustomNotebook(ttk.Notebook):
             cancel_btn.pack(side=RIGHT, padx=10)
 
             new_win.attributes('-topmost', True)
+            new_win.update_idletasks()
+
+            width = new_win.winfo_width()
+            frm_width = new_win.winfo_rootx() - new_win.winfo_x()
+            win_width = width + 2 * frm_width
+            height = new_win.winfo_height()
+            titlebar_height = new_win.winfo_rooty() - new_win.winfo_y()
+            win_height = height + titlebar_height + frm_width
+            x = new_win.winfo_screenwidth() // 2 - win_width // 2
+            y = new_win.winfo_screenheight() // 2 - int(win_height // 1.2)
+            new_win.geometry('{}x{}+{}+{}'.format(width, height, x, y))
+
             new_win.mainloop()
 
     def add_file_tab(self, event=None, _file=None, _file_name=None):
@@ -339,7 +351,20 @@ class CustomNotebook(ttk.Notebook):
         sf_root.bind('<KeyPress-Escape>', lambda a: exit_lbl.config(fg='white', bg='red'))
         sf_root.bind('<KeyRelease-Escape>', lambda a: sf_root.destroy())
         sf_root.bind('<FocusOut>', lambda a=None: sf_root.destroy())
+
         sf_root.wm_attributes('-topmost', 1)
+        sf_root.update_idletasks()
+
+        width = sf_root.winfo_width()
+        frm_width = sf_root.winfo_rootx() - sf_root.winfo_x()
+        win_width = width + 2 * frm_width
+        height = sf_root.winfo_height()
+        titlebar_height = sf_root.winfo_rooty() - sf_root.winfo_y()
+        win_height = height + titlebar_height + frm_width
+        x = sf_root.winfo_screenwidth() // 2 - win_width // 2
+        y = sf_root.winfo_screenheight() // 2 - int(win_height // 1.2)
+        sf_root.geometry('{}x{}+{}+{}'.format(width, height, x, y))
+        
         sf_root.focus_force()
 
 
@@ -358,15 +383,20 @@ class ColorTextTab(Frame):
         h_scroll.pack(side=BOTTOM, fill=X)
         h_scroll.config(command=self.colortext.xview)
         self.bind('<Control-o>', self.open_file)
-        self.bind('<Control-O>', self.open_file)
-        self.bind('<Control-S>', self.save)
         self.bind('<Control-s>', self.save)
         self.bind('<Control-Shift-S>', self.save_as)
-        self.bind('<Control-Shift-s>', self.save_as)
-        self.bind('<Control-R>', self.redo_event)
         self.bind('<Control-r>', self.redo_event)
-        self.bind('<Control-Z>', self.undo_event)
         self.bind('<Control-z>', self.undo_event)
+        self.bind('<Control-w>', self.on_tab_close)
+        self.colortext.bind('<Control-w>', lambda _: self.on_tab_close(_, wid=self.colortext))
+
+    def on_tab_close(self, event=None, wid=None):
+        if wid is not None:
+            wid.master.master.focus_force()
+            wid.master.master.close(event=event)
+            return
+        self.master.focus_force()
+        self.master.close()
 
     def new_file(self, event=None):
         self.master.add_py_tab()
@@ -664,19 +694,14 @@ def main():
     ez_py = CustomNotebook(root)
     ez_py.pack(side=TOP, fill=BOTH, expand=YES)
 
-    root.bind('<Control-N>', ez_py.select_new_tab)
     root.bind('<Control-n>', ez_py.select_new_tab)
     root.bind('<Control-Shift-C>', ez_py.add_console_tab)
-    root.bind('<Control-Shift-c>', ez_py.add_console_tab)
     root.bind('<Control-Shift-N>', ez_py.add_py_tab)
-    root.bind('<Control-Shift-n>', ez_py.add_py_tab)
-    root.bind('<Control-T>', theme_settings)
-    root.bind('<Control-t>', theme_settings)
+    root.bind('<Control-Shift-T>', lambda e=None: theme_settings(e, root=root))
     add.bind('<Enter>', lambda a=None, b=None: [add.config(fg='orange'),
                                                 ToolTip(add, 'Consolas 9', 'Create a new file', follow=False)])
     add.bind('<Leave>', lambda a=None: add.config(fg='blue'))
     add.bind('<Button-1>', ez_py.select_new_tab)
-    add.bind('<Control-Shift-n>', ez_py.select_new_tab)
     add.bind('<Control-Shift-N>', ez_py.select_new_tab)
     themes.bind('<Enter>', lambda a=None, b=None: [themes.config(fg='orange'),
                                                    ToolTip(themes, 'Consolas 9', 'Theme Settings', follow=False)])

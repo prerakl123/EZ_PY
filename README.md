@@ -59,19 +59,15 @@ tkhtmlview
 # Problems
 There can be problems while creating \**.md* files like the preview may scroll back to top.
 
-Docstrings for descriptions have not been added yet.
-
-Consoles that will be added may take input but the output or the error will be displayed on the last opened console which is a difficult bug to handle while having stdin reader
-(that's why the old Console is also added in the above files which does not include input reader but has a variety of other features which finally I want to merge with the input
-reader)
+Docstrings for descriptions not added.
 
 Tab lengths currently have to be defined in the `tab_length` key in `config.json` file.
-
-`Ctrl+W` or `Ctrl+F4` for closing the current tab might not work if the focus not set on the Notebook widget but the 'X' for closing the tabs is included.
 
 # Future Updates
 More Themes will be updated and the currently defined but not assigned themes will have their color combinations assigned to them.
 
-Will include *fullscreen* feature from one of the future updates
+*fullscreen* in one of the future updates
 
 Tabs and other settings for the editor will be included.
+
+Actual customized notebook widget will be implemented. (not the customized built-in notebook)

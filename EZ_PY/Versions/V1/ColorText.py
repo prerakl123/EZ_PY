@@ -1,13 +1,14 @@
 from tkinter import *
 import tkinter.messagebox
 import tkinter.filedialog
+from tkinter.font import Font
 import keyword
 import builtins
 import re
-# from code import InteractiveInterpreter
 import json
 from ctypes import windll
 from LineNumberCanvas import LineNumberCanvas
+# from code import InteractiveInterpreter
 
 
 # class StdoutRedirector(object):
@@ -39,11 +40,14 @@ class ColorText(Text):
         self.PROGRAM_NAME = 'EZ_PY'
         self.file_name = None
         self.FILETYPES = [("Python File", "*.py"), ("Text Documents", "*.txt"), ("All Files", "*.*")]
-
         self.storeobj = {}
-
+        self.text_tags = ['comment', 'builtin', 'string', 'keyword', 'numbers', 'special', 'bracket', 'dunder',
+                          'functions']
+        self.other_tags = [SEL, 'active_line', 'similar_selection']
         self.module_list = self.__list()
         self.executing = False
+        self.last_find_word = ""
+        self.clipboard_text = []
 
         self.mechanise()
         self._set_()
@@ -54,59 +58,71 @@ class ColorText(Text):
 
         with open('importable_modules', 'w') as imp_mods:
             for i in self.module_list:
-                if ' ' not in i and '{' not in i and '}' not in i:
-                    imp_mods.write(i+'\n')
+                imp_mods.write(i+'\n')
 
         self.textfilter = re.compile(self.sort_regex(), re.S)
+        self.color_text_font = Font(self, font=self.config_dict['color_text_font'])
 
-        # self.after(2000, self.color_code_block)
-
-        self.bind('<Control-Shift-N>', self.new_file)
-        self.bind('<Control-o>', self.open_file)
-        self.bind('<Control-s>', self.save)
+        self.bind('3', self.on_alt_3)
+        self.bind('<<Paste>>', lambda _=None: self.after(12, self.on_paste))
+        self.bind('<<SelectNone>>', self.on_select_remove)
+        self.bind('<<Selection>>', self.on_select)
+        self.bind('<Button-3>', self.r_click, add='')
         self.bind('<Control-f>', self.find_text)
+        self.bind('<Control-o>', self.open_file)
         self.bind('<Control-r>', self.re_place)
+        self.bind('<Control-s>', self.save)
+        self.bind('<Control-slash>', self.on_ctrl_fwd_slash)
         self.bind('<Control-z>', self.undo_event)
+        self.bind('<Control-Home>', self.on_ctrl_home)
+        self.bind('<Control-MouseWheel>', self.on_ctrl_mswheel)
+        self.bind('<Control-Shift-Home>', self.on_ctrl_shift_home)
+        self.bind('<Control-Shift-N>', self.new_file)
         self.bind('<Control-Shift-Z>', self.redo_event)
-        self.bind('<KeyPress-bracketleft>', lambda a: self.autocomplete(val='['))
+        self.bind('<<Copy>>', self.on_copy)
+        self.bind('<<Cut>>', self.on_cut)
+        self.bind('<Delete>', self.on_delete)
+        self.bind('<FocusIn>', self.inst_trigger)
+        self.bind('<Home>', self.on_home)
+        self.bind('<KeyPress-BackSpace>', self.on_bkspace)
         self.bind('<KeyPress-braceleft>', lambda a: self.autocomplete(val='{'))
-        self.bind('<KeyPress-parenleft>', lambda a: self.autocomplete(val='('))
-        self.bind('<KeyPress-bracketright>', lambda a: self.autocomplete(val=']'))
         self.bind('<KeyPress-braceright>', lambda a: self.autocomplete(val='}'))
+        self.bind('<KeyPress-bracketleft>', lambda a: self.autocomplete(val='['))
+        self.bind('<KeyPress-bracketright>', lambda a: self.autocomplete(val=']'))
+        self.bind('<KeyPress-colon>', lambda a: self.autocomplete(val=':'))
+        self.bind('<KeyPress-less>', lambda a: self.autocomplete(val='<'))
+        self.bind('<KeyPress-greater>', lambda a: self.autocomplete(val='>'))
+        self.bind('<KeyPress-parenleft>', lambda a: self.autocomplete(val='('))
         self.bind('<KeyPress-parenright>', lambda a: self.autocomplete(val=')'))
         self.bind('<KeyPress-quoteright>', lambda a: self.autocomplete(val="'"))
         self.bind('<KeyPress-quotedbl>', lambda a: self.autocomplete(val='"'))
-        self.bind('<KeyPress-less>', lambda a: self.autocomplete(val='<'))
-        self.bind('<KeyPress-greater>', lambda a: self.autocomplete(val='>'))
-        self.bind('<KeyPress-colon>', lambda a: self.autocomplete(val=':'))
-        self.bind('<KeyPress-BackSpace>', self.on_bkspace)
         self.bind('<KeyRelease>', self.trigger)
-        self.bind('<Tab>', self.on_tab)
-        # self.bind('<Control_R>', self.color_code_block)
-        # self.bind('<Control_L>', self.color_code_block)
+        self.bind('<Left>', self.on_left_key)
         self.bind('<Return>', self.on_return)
+        self.bind('<Right>', self.on_right_key)
+        self.bind('<Shift-Home>', self.on_shift_home)
+        self.bind('<Shift-Left>', self.on_shift_left)
+        self.bind('<Shift-Right>', self.on_shift_right)
+        self.bind('<Tab>', self.on_tab)
+        # self.bind('<Control_L>', self.color_code_block)
+        # self.bind('<Control_R>', self.color_code_block)
+        # self.bind('<F5>', self.execute)
+        # self.bind('<<NextChar>>', self.on_next_char)
+        # self.bind('<<NextPara>>', on_para_change)
+        # self.bind('<<PrevChar>>', self.on_prev_char)
         # self.bind('<Shift_R>', self.color_code_block)
         # self.bind('<Shift_L>', self.color_code_block)
-        self.bind('<Button-3>', self.r_click, add='')
-        self.bind('<Home>', self.on_home)
-        self.bind('<Control-Home>', self.on_ctrl_home)
-        self.bind('<Shift-Home>', self.on_shift_home)
-        self.bind('<Delete>', self.on_delete)
-        # self.bind('<<NextChar>>', self.on_next_char)
-        # self.bind('<<PrevChar>>', self.on_prev_char)
-        # self.bind('<F5>', self.execute)
-        self.bind('<<Selection>>', self.on_select)
-        self.bind('<<SelectNone>>', self.on_select_remove)
-        self.bind('<<Paste>>', lambda _=None: self.after(12, self.on_paste))
-        # self.bind('<<NextPara>>', on_para_change)      <=
+        # self.after(2000, self.color_code_block)
         # self.after(4000, self.color_code_block)
-        self.bind('<FocusIn>', self.inst_trigger)
 
     def __list(self) -> list:
         modules = []
         import pkgutil
         for i in pkgutil.iter_modules():
-            modules.append(i.name)
+            if any([i.name.__contains__(j) for j in ' {|}/(\\).,?+-=!@#$%^&*']):
+                pass
+            else:
+                modules.append(i.name)
         in_modules = sys.modules.keys()
         modules = list(modules+list(in_modules))
         for i in modules:
@@ -135,62 +151,33 @@ class ColorText(Text):
 #        except Exception or Warning:
 #            pass
 
-    def open_file(self, event=None):
-        input_file_name = tkinter.filedialog.askopenfile(defaultextension=".txt", filetypes=self.FILETYPES)
-        if input_file_name:
-            self.file_name = input_file_name.name
-            # self.root.title('{} - {}'.format(self.file_name, self.PROGRAM_NAME))
-            self.delete(1.0, END)
-            with open(self.file_name, encoding='utf-8') as _file:
-                try:
-                    self.insert(1.0, _file.read())
-                except UnicodeError or UnicodeTranslateError or UnicodeDecodeError or UnicodeEncodeError or\
-                        UnicodeWarning:
-                    tkinter.messagebox.showerror('Can\'t open file',
-                                                 'This error could be due to images in a file or some'
-                                                 ' characters that the program is unable to read')
-        self.inst_trigger()
+    def _any(self, name, alternates):
+        """Return a named group pattern matching list of alternates."""
+        return "(?P<%s>" % name + "|".join(alternates) + ")"
 
-    def new_file(self, event=None):
-        # self.root.title("Untitled")
-        self.file_name = None
-        self.delete(1.0, END)
-        # output.delete(1.0, END)
+    def _coordinate(self, start, end, string):
+        """Returns indices of the start and end of matched `string`"""
+        srow = string[:start].count('\n') + 1
+        scolsplitlines = string[:start].split('\n')
 
-    def write_to_file(self, _file_name):
-        try:
-            content = self.get(1.0, 'end')
-            with open(_file_name, 'w') as the_file:
-                the_file.write(content)
-        except IOError:
-            tkinter.messagebox.showwarning("Save", "Could not save the file.")
+        if len(scolsplitlines) != 0:
+            scolsplitlines = scolsplitlines[len(scolsplitlines) - 1]
 
-    def save_as(self, event=None):
-        input_file_name = tkinter.filedialog.asksaveasfile(defaultextension=".py", filetypes=self.FILETYPES)
-        if input_file_name:
-            self.file_name = input_file_name.name
-            self.write_to_file(self.file_name)
-            # self.root.title('{} - {}'.format(self.file_name, self.PROGRAM_NAME))
-        return "break"
+        scol = len(scolsplitlines)
+        lrow = string[:end + 1].count('\n') + 1
+        lcolsplitlines = string[:end].split('\n')
 
-    def save(self, event=None):
-        if not self.file_name:
-            self.save_as()
-        else:
-            self.write_to_file(self.file_name)
-        return "break"
+        if len(lcolsplitlines) != 0:
+            lcolsplitlines = lcolsplitlines[len(lcolsplitlines) - 1]
 
-    def undo_event(self, event=None):
-        self.event_generate('<<Undo>>')
-        # self.edit_undo()
-        self.inst_trigger()
-        return 'break'
+        lcol = len(lcolsplitlines) + 1
 
-    def redo_event(self, event=None):
-        self.event_generate('<<Redo>>')
-        # self.edit_redo()
-        self.inst_trigger()
-        return 'break'
+        return '{}.{}'.format(srow, scol), '{}.{}'.format(lrow, lcol)
+
+    def _set_(self):
+        self.linenumbers.connect(self)
+        self.linenumbers.pack(side=LEFT, fill=Y)
+        return
 
     def autocomplete(self, val):
         if val == '(':
@@ -198,24 +185,24 @@ class ColorText(Text):
             self.mark_set(INSERT,
                           f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) - 1}")
             self.current_bracket()
-            
+
         elif val == '{':
             self.insert(INSERT, '}')
             self.mark_set(INSERT,
                           f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) - 1}")
             self.current_bracket()
-            
+
         elif val == '[':
             self.insert(INSERT, ']')
             self.mark_set(INSERT,
                           f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) - 1}")
             self.current_bracket()
-            
+
         # elif val == '<':
-            # self.insert(INSERT, '>')
-            # self.mark_set(INSERT,
+        # self.insert(INSERT, '>')
+        # self.mark_set(INSERT,
         # f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) - 1}")
-            
+
         elif val == ')':
             if self.get(self.index(INSERT),
                         f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) + 1}") == ')':
@@ -223,63 +210,68 @@ class ColorText(Text):
                               f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) + 1}")
                 self.current_bracket()
                 # re.match(r'\s*\([^)]+\)', self.get("insert linestart", "insert lineend"))
-                
+
             else:
                 self.current_bracket()
                 return ')'
-            
+
             return 'break'
-        
+
         elif val == '}':
             if self.get(self.index(INSERT),
                         f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) + 1}") == '}':
                 self.mark_set(INSERT,
                               f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) + 1}")
                 self.current_bracket()
-                
+
             else:
                 self.current_bracket()
                 return '}'
-            
+
             return 'break'
-        
+
         elif val == ']':
             if self.get(self.index(INSERT),
                         f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) + 1}") == ']':
                 self.mark_set(INSERT,
                               f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) + 1}")
                 self.current_bracket()
-                
+
             else:
                 self.current_bracket()
                 return ']'
-            
+
             return 'break'
-        
+
         # elif val == '>':
-            # if self.get(self.index(INSERT),
+        # if self.get(self.index(INSERT),
         # f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) + 1}") == '>':
-            # self.mark_set(INSERT,
+        # self.mark_set(INSERT,
         # f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) + 1}")
 
-            # else:
-            # return '>'
-            
-            # return 'break'
-        
+        # else:
+        # return '>'
+
+        # return 'break'
+
         elif val == '"':
             if self.get(self.index(INSERT),
                         f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) + 1}") == '"':
                 self.mark_set(INSERT,
                               f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) + 1}")
                 return 'break'
-            
+
+            elif self.get(self.index(INSERT + ' -2c'), self.index(INSERT)) == '""':
+                self.insert(INSERT, '""""')
+                self.mark_set(INSERT, self.index(INSERT + ' -3c'))
+                return 'break'
+
             else:
-                if \
-                        self.get(f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) - 1}",
-                                 self.index(INSERT)) in \
-                        ['', ' ', '(', '[', '{', '=', ',', 'B', 'br', 'Br', 'bR', 'BR', 'rb', 'rB', 'Rb', 'RB',
-                         'r', 'u', 'R', 'U', 'f', 'F', 'fr', 'Fr', 'fR', 'FR', 'rf', 'rF', 'Rf', 'RF']:
+                if self.get(f"{int(self.index(INSERT).split('.')[0])}."
+                            f"{int(self.index(INSERT).split('.')[1]) - 1}",
+                            self.index(INSERT)) in ['', ' ', '(', '[', '{', '=', ',', 'B', 'br', 'Br', 'bR', 'BR',
+                                                    'rb', 'rB', 'Rb', 'RB', 'r', 'u', 'R', 'U', 'f', 'F', 'fr',
+                                                    'Fr', 'fR', 'FR', 'rf', 'rF', 'Rf', 'RF']:
                     self.insert(INSERT, '"')
                     self.mark_set(
                         INSERT, f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) - 1}")
@@ -290,13 +282,18 @@ class ColorText(Text):
                 self.mark_set(INSERT,
                               f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) + 1}")
                 return 'break'
-            
+
+            elif self.get(self.index(INSERT + ' -2c'), self.index(INSERT)) == "''":
+                self.insert(INSERT, "''''")
+                self.mark_set(INSERT, self.index(INSERT + ' -3c'))
+                return 'break'
+
             else:
-                if \
-                        self.get(f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1])-1}",
-                                 self.index(INSERT)) in \
-                        ['', ' ', '(', '[', '{', '=', ',', 'B', 'br', 'Br', 'bR', 'BR', 'rb', 'rB', 'Rb', 'RB',
-                         'r', 'u', 'R', 'U', 'f', 'F', 'fr', 'Fr', 'fR', 'FR', 'rf', 'rF', 'Rf', 'RF']:
+                if self.get(f"{int(self.index(INSERT).split('.')[0])}."
+                            f"{int(self.index(INSERT).split('.')[1]) - 1}",
+                            self.index(INSERT)) in ['', ' ', '(', '[', '{', '=', ',', 'B', 'br', 'Br', 'bR', 'BR',
+                                                    'rb', 'rB', 'Rb', 'RB', 'r', 'u', 'R', 'U', 'f', 'F', 'fr',
+                                                    'Fr', 'fR', 'FR', 'rf', 'rF', 'Rf', 'RF']:
                     self.insert(INSERT, "'")
                     self.mark_set(
                         INSERT, f"{int(self.index(INSERT).split('.')[0])}.{int(self.index(INSERT).split('.')[1]) - 1}")
@@ -310,13 +307,101 @@ class ColorText(Text):
 
         return
 
-    def current_bracket(self):
-        start_char = (self.index(INSERT), self.index(INSERT+'+1c'))
-        end_char = (self.index(INSERT+'-1c'), self.index(INSERT))
-        self.tag_add('bracket', start_char[0], start_char[1])
-        self.tag_add('bracket', end_char[0], end_char[1])
-        self.tag_config('bracket', )
-        # print(self.index(INSERT+'-1c'), self.index(INSERT), self.index(INSERT+'+1c'))
+    def binding_keys(self):
+        for key in ['<Down>', '<Up>', "<<Changed>>", "<Configure>", '<Home>', '<End>', '<Prior>', '<Control_L>',
+                    '<Next>', '<Control_R>']:
+            self.bind(key, self.changed)
+        self.linenumbers.bind('<Button-1>', self.linenumbers.get_breakpoint_number)
+        return
+
+    def changed(self, event):
+        self.linenumbers.re_render()
+        return
+
+    def check(self, k: dict):
+        font = list(self.config_dict['color_text_font'])
+        if k['COMMENT'] is not None:
+            return (
+                'comment', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['comment'][0],
+                f"{font[0]} {font[1]}" +
+                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['comment'][1]}")
+
+        elif k['BUILTIN'] is not None:
+            return (
+                'builtin', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['builtin'][0],
+                f"{font[0]} {font[1]}" +
+                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['builtin'][1]}")
+
+        elif k['STRING'] is not None:
+            return (
+                'string', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['string'][0],
+                f"{font[0]} {font[1]}" +
+                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['string'][1]}")
+
+        elif k['ML_STRING'] is not None:
+            return (
+                'ml_string', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['ml_string'][0],
+                f"{font[0]} {font[1]}" +
+                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['ml_string'][1]}")
+
+        elif k['KEYWORD'] is not None:
+            return (
+                'keyword', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['keyword'][0],
+                f"{font[0]} {font[1]}" +
+                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['keyword'][1]}")
+
+        elif k['NUMBERS'] is not None:
+            return (
+                'numbers', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['numbers'][0],
+                f"{font[0]} {font[1]}" +
+                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['numbers'][1]}")
+
+        elif k['SPECIAL'] is not None:
+            return (
+                'special', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['special'][0],
+                f"{font[0]} {font[1]}" +
+                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['special'][1]}")
+
+
+        elif k['BRACKET'] is not None:
+            return (
+                'bracket', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['bracket'][0],
+                f"{font[0]} {font[1]}" +
+                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['bracket'][1]}")
+
+        # elif k['MODULES'] is not None:
+        #     return (
+        #         'modules', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['modules'][0],
+        #         f"{font[0]} {font[1]}" +
+        #         f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['modules'][1]}")
+
+        elif k['DUNDER'] is not None:
+            return (
+                'dunder', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['dunder'][0],
+                f"{font[0]} {font[1]}" +
+                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['dunder'][1]}")
+
+        elif k['FUNCTIONS'] is not None:
+            return (
+                'functions',
+                self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['functions'][0],
+                f"{font[0]} {font[1]}" +
+                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['functions'][1]}")
+
+        # elif k['LINK'] is not None:
+        #     return (
+        #         'link', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['link'][0],
+        #         f"{font[0]} {font[1]}" +
+        #         f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['link'][1]}")
+
+        # elif k['WHITESPACE'] is not None:
+        #     return (
+        #    'whitespace', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['whitespace'][0],
+        #         f"{font[0]} {int(font[1]//1.2)}" +
+        #         f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['whitespace'][1]}")
+
+        else:
+            return 'ss', 'NILL', 'NILL'
 
     def check_paren(self, string):
         open_list = ["[", "{", "("]
@@ -339,6 +424,14 @@ class ColorText(Text):
         else:
             return False
 
+    def current_bracket(self):
+        start_char = (self.index(INSERT), self.index(INSERT+'+1c'))
+        end_char = (self.index(INSERT+'-1c'), self.index(INSERT))
+        self.tag_add('bracket', start_char[0], start_char[1])
+        self.tag_add('bracket', end_char[0], end_char[1])
+        self.tag_config('bracket', )
+        # print(self.index(INSERT+'-1c'), self.index(INSERT), self.index(INSERT+'+1c'))
+
     def find_indent(self, string, value=4) -> dict:
         """returns indent level and spaces for single line `string` value"""
         indent_spaces = 0
@@ -349,13 +442,41 @@ class ColorText(Text):
                 break
         return {'spaces': indent_spaces, 'level': indent_spaces//value}
 
-    def toggle_highlight(self, event=None):
-        select = self.tag_ranges(SEL)
-        # print(select, len(select))
-        if len(select) > 0:
-            self.highlight_current_line(False)
-            return
-        self.highlight_current_line(self.config_dict['highlight_current_line'])
+    def find_text(self, event=None):
+        pre_text = ''
+        if self.tag_ranges(SEL) != ():
+            pre_text = self.selection_get()
+
+        search_toplevel = Toplevel(self.root)
+        search_toplevel.title('Find Text')
+        search_toplevel.transient(self.root)
+
+        Label(search_toplevel, text="Find All:").grid(row=0, column=0, sticky='e')
+
+        search_entry_widget = Entry(search_toplevel, width=35)
+        search_entry_widget.grid(row=0, column=1, padx=2, pady=2, sticky='we')
+        search_entry_widget.insert(0, pre_text)
+        search_entry_widget.select_range(0, END)
+        search_entry_widget.focus_set()
+        ignore_case_value, regex_value = IntVar(), IntVar()
+        Checkbutton(search_toplevel, text='Ignore Case', variable=ignore_case_value).grid(row=1, column=1, sticky=W,
+                                                                                          padx=1,
+                                                                                          pady=2)
+        Checkbutton(search_toplevel, text='Regular Expression', variable=regex_value).grid(row=1, column=1, sticky=E,
+                                                                                           padx=2, pady=2)
+        Button(search_toplevel, text="Find All", underline=0,
+               command=lambda: self.search_output(search_entry_widget.get(), ignore_case_value.get(), self,
+                                                  search_toplevel, search_entry_widget, regex_value.get())).grid(
+            row=0, column=2, sticky=E + W, padx=2, pady=2)
+
+        def close_search_window(_event=None):
+            self.last_find_word = search_entry_widget.get()
+            self.tag_remove('match', '1.0', END)
+            search_toplevel.destroy()
+
+        search_toplevel.bind('<Escape>', close_search_window)
+        search_toplevel.protocol('WM_DELETE_WINDOW', close_search_window)
+        return "break"
 
     def highlight_current_line(self, event=None):
         if event is True:
@@ -369,23 +490,296 @@ class ColorText(Text):
             self.tag_remove('active_line', 1.0, END)
             self.after(25, self.toggle_highlight)
 
+    def inst_trigger(self, event=None, start='1.0', stop=END):
+        val = self.get(start, stop)
+        if len(val) == 1:
+            return
+
+        for i in ['comment', 'builtin', 'string', 'ml_string', 'keyword', 'numbers', 'special', 'bracket',
+                  'dunder', 'functions']:
+            self.tag_remove(start, stop)
+
+        for i in self.textfilter.finditer(val):
+            _start = i.start()
+            end = i.end() - 1
+            tagtype, color, font_style = self.check(k=i.groupdict())
+            # print(tagtype, color, font_style)
+            if color != 'NILL':
+                ind1, ind2 = self._coordinate(start=_start, end=end, string=val)
+                self.tag_add(tagtype, ind1, ind2)
+                self.tag_config(tagtype, foreground=color, font=font_style)
+            # self.tag_bind('link', '<Control-Button-1>', self.open_link)
+            # self.tag_bind('link', '<Double-1>', self.open_link)
+            # self.tag_configure('link', foreground='#0000ff')
+            # self.tag_raise('link', 'string')
+            # self.tag_raise('link', 'comment')
+        # print(self.tag_ranges('string'))
+        # print(self.tag_ranges('ml_string'))
+        # print()
+        self.tag_raise('ml_string')
+        return 'break'
+
+    def linenum_width(self, event=None):
+        if self.linenumbers.temp is not None:
+            self.linenumbers.configure(width=len(self.linenumbers.temp.split('.')[0])*10+5, bg=self.theme[1])
+        self.after(10, self.linenum_width)
+
+    def mechanise(self):
+        self.tk.eval('''
+        proc widget_interceptor {widget command args} {
+            set orig_call [uplevel 1 [linsert $args 0 $command]]
+            if {
+                [lindex $args 0] in {insert delete replace} ||
+                ([lrange $args 0 2] == {mark set insert}) || 
+                ([lrange $args 0 1] == {xview moveto}) ||
+                ([lrange $args 0 1] == {xview scroll}) ||
+                ([lrange $args 0 1] == {yview moveto}) ||
+                ([lrange $args 0 1] == {yview scroll})
+            } then {
+                event generate $widget <<Changed>>
+            }
+            #return original command
+            return $orig_call
+        }
+        proc install_widget_interceptor {widget} {
+            global unique_widget_id
+            set handle ::_intercepted_widget_[incr unique_widget_id]
+            rename $widget $handle
+            interp alias {} ::$widget {} widget_interceptor $widget $handle
+        }
+        ''')
+        self.tk.eval('''
+        install_widget_interceptor {widget}
+        '''.format(widget=str(self)))
+        return
+
+    def new_file(self, event=None):
+        # self.root.title("Untitled")
+        self.file_name = None
+        self.delete(1.0, END)
+        # output.delete(1.0, END)
+
+    def on_alt_3(self, event):
+        # print(event.state)
+        # print(event.__dict__)
+        if event.state != 131072:
+            return
+
+        try:
+            selection = self.tag_ranges(SEL)
+            selection1 = int(str(selection[0]).split('.')[0])
+            selection2 = int(str(selection[1]).split('.')[0])
+            for i in range(selection1, selection2):
+                self.insert(f"{i}.0", '##')
+            self.tag_remove(SEL, 1.0, END)
+            self.tag_add(SEL, f"{selection1}.0 linestart", f"{selection2}.0 lineend")
+            self.mark_set(INSERT, f"{selection2}.0 lineend")
+            self.after(2000, self.inst_trigger)
+
+        except IndexError or Exception:
+            cur_ind = self.index(INSERT)
+            self.insert(f"{cur_ind} linestart", '##')
+            self.tag_remove(SEL, 1.0, END)
+            self.tag_add(SEL, f"{cur_ind} linestart", f"{cur_ind} lineend")
+            self.after(2000, self.inst_trigger)
+
+    def on_bkspace(self, event):
+        """:params event: parameter for backspace event list"""
+        if self.tag_ranges(SEL) != ():
+            return
+        cur_ind = str(self.index(INSERT))
+        one_less_char = self.get(f"{cur_ind} -1c", cur_ind)
+        one_more_char = self.get(cur_ind, f"{cur_ind} +1c")
+        three_less_char = self.get(f"{cur_ind} -3c", cur_ind)
+        three_more_char = self.get(cur_ind, f"{cur_ind} +3c")
+        
+        one_less_char_ind = self.index(f"{cur_ind} -1c")
+        one_more_char_ind = self.index(f"{cur_ind} +1c")
+        three_less_char_ind = self.index(f"{cur_ind} -3c")
+        three_more_char_ind = self.index(f"{cur_ind} +3c")
+        open_bracs, close_bracs = ['{', '[', '('], ['}', ']', ')']
+
+        if three_less_char in ['"""', "'''"]:
+            if three_more_char == three_less_char:
+                self.delete(three_less_char_ind, three_more_char_ind)
+        elif one_less_char in ['"', "'"]:
+            if one_more_char == one_less_char:
+                self.delete(cur_ind, one_more_char_ind)
+        elif one_less_char in open_bracs:
+            if one_more_char == close_bracs[open_bracs.index(one_less_char)]:
+                self.delete(cur_ind, one_more_char_ind)
+
+        if one_less_char.isspace():
+            target_ind = f"{cur_ind} -4c"
+            del_chars = 0
+            for i in self.get(target_ind, cur_ind):
+                if i.isspace():
+                    del_chars += 1
+                elif i.isalnum():
+                    del_chars -= 1
+            if del_chars <= 0:
+                del_chars = 1
+            self.delete(f"{cur_ind} -{del_chars}c", self.index(INSERT))
+            return 'break'
+        else:
+            return
+
+    def on_copy(self, event):
+        copy_text = self.selection_get()
+        copy_text = copy_text.replace('\n', chr(9166))
+        copy_text = copy_text.replace('\t', chr(8677))
+        self.clipboard_text.append(copy_text)
+        # print(self.clipboard_text)
+
+    def on_ctrl_fwd_slash(self, event):
+        try:
+            selection = self.tag_ranges(SEL)
+            selection1 = int(str(selection[0]).split('.')[0])
+            selection2 = int(str(selection[1]).split('.')[0])
+            for i in range(selection1, selection2 + 1):
+                if self.get(self.index(f"{i}.0 linestart"), f"{i}.2") == '# ':
+                    self.delete(f"{i}.0 linestart", f"{i}.2")
+                else:
+                    self.insert(f"{i}.0 linestart", '# ')
+            self.tag_remove(SEL, 1.0, END)
+            self.tag_add(SEL, f"{selection1}.0 linestart", f"{selection2}.0 lineend")
+            self.mark_set(INSERT, f"{selection2}.0 lineend")
+            self.after(2000, self.inst_trigger)
+
+        except IndexError or Exception:
+            if self.get(self.index(f"insert linestart"), f"insert linestart +2c") == '# ':
+                self.delete(f"insert linestart", f"insert linestart +2c")
+                return 'break'
+            cur_ind = self.index(INSERT)
+            self.insert(f"{cur_ind} linestart", '# ')
+            self.tag_remove(SEL, 1.0, END)
+            self.tag_add(SEL, f"{cur_ind} linestart", f"{cur_ind} lineend")
+            self.after(2000, self.inst_trigger)
+        return 'break'
+
+    def on_ctrl_home(self, event):
+        self.mark_set(INSERT, index='1.0')
+
+    def on_ctrl_mswheel(self, event=None):
+        font = self.color_text_font.actual()
+        if event.delta > 0:
+            if int(font['size']) >= 300:
+                return
+            self.config_dict['color_text_font'] = [f"{font['family']}", int(font['size']) + 1]
+            for i in self.text_tags:
+                self.tag_config(i, font=f"{font['family']} {int(font['size']) + 1}")
+            self.config(font=f"{font['family']} {int(font['size']) + 1}")
+            self.color_text_font.config(size=int(font['size']) + 1)
+        else:
+            if int(font['size']) == 1:
+                return
+            self.config_dict['color_text_font'] = [f"{font['family']}", int(font['size']) - 1]
+            for i in self.text_tags:
+                self.tag_config(i, font=f"{font['family']} {int(font['size']) - 1}")
+            self.config(font=f"{font['family']} {int(font['size']) - 1}")
+            self.color_text_font.config(size=int(font['size']) - 1)
+
+    def on_ctrl_shift_home(self, event):
+        selection_range = self.tag_ranges(SEL) if self.tag_ranges(SEL) != () else [INSERT]*2
+        # print(selection_range)
+        self.tag_add(SEL, 1.0, selection_range[1])
+        self.mark_set(INSERT, 1.0)
+        return 'break'
+
+    def on_cut(self, event):
+        cut_text = self.selection_get()
+        cut_text = cut_text.replace('\n', chr(9166))
+        cut_text = cut_text.replace('\t', chr(8677))
+        self.clipboard_text.append(cut_text)
+
+    def on_delete(self, event):
+        """:param event: parameter for delete event list"""
+        pass
+    #     cur_ind = str(self.index(INSERT))
+    #     one_less_char = self.get(f"{int(cur_ind.split('.')[0])}.{int(cur_ind.split('.')[1]) - 1}", INSERT)
+    #     one_less_char_ind = f"{int(cur_ind.split('.')[0])}.{int(cur_ind.split('.')[1]) - 1}"
+    #     one_more_char = self.get(INSERT, f"{int(cur_ind.split('.')[0])}.{int(cur_ind.split('.')[1]) + 1}")
+    #     one_more_char_ind = f"{int(cur_ind.split('.')[0])}.{int(cur_ind.split('.')[1]) + 1}"
+    #     open_bracs, close_bracs = ['{', '[', '('], ['}', ']', ')']
+
+    def on_shift_down_key(self, event):
+        selection_range = self.tag_ranges(SEL) if self.tag_ranges(SEL) != () else [None] * 2
+        if selection_range == [None, None]:
+            pass
+
+    def on_home(self, event):
+        cur_line = self.get(INSERT + ' linestart', INSERT+' lineend')
+        if cur_line.count('\t') == 0 and cur_line.startswith(' '):
+            s1 = cur_line.lstrip()
+            cur_indent = int(len(cur_line) - len(s1))
+        else:
+            cur_indent = int(cur_line.count('\t'))
+        cur_row = int(self.index(INSERT).split('.')[0])
+
+        # print(cur_row, cur_indent, cur_line)
+        # print(self.index(INSERT), float(f'{cur_row}.{cur_indent}'))
+
+        if int(str(self.index(INSERT)).split('.')[0]) == cur_row and \
+                int(str(self.index(INSERT)).split('.')[1]) == cur_indent:
+            self.mark_set(INSERT, f'{cur_row}.0')
+            self.see(INSERT)
+
+        elif int(str(self.index(INSERT)).split('.')[0]) == cur_row and int(str(self.index(INSERT)).split('.')[1]) == 0:
+            self.mark_set(INSERT, f'{cur_row}.{cur_indent}')
+            self.see(INSERT)
+
+        else:
+            self.see(INSERT)
+            self.mark_set(INSERT, f'{cur_row}.{cur_indent}')
+        return 'break'
+
+    def on_left_key(self, event):
+        if event.state == 262145:
+            return
+        try:
+            selection = self.tag_ranges(SEL)
+            self.mark_set(INSERT, selection[0])
+            self.tag_remove(SEL, 1.0, END)
+            self.see(INSERT)
+            return 'break'
+        except IndexError or Exception:
+            pass
+
+    def on_next_char(self, event):
+        cur_char = self.get(self.index(INSERT), self.index(INSERT+'+1c'))
+        next_char = self.get(self.index(INSERT+'+1c'), self.index(INSERT+'+2c'))
+        # print(cur_char, next_char)
+
+    def on_paste(self, event=None):
+        # cur_ind = str(self.index(INSERT))
+        # text = self.clipboard_get()
+        # lines = int(text.count('\n'))
+        # self.insert(cur_ind, text)
+        # last_ind = f"{str(int(cur_ind.split('.')[0]) + lines)}.0"
+        self.inst_trigger()
+        self.see(INSERT)
+        # return 'break'
+
+    def on_prev_char(self, event):
+        # cur_char = self.get(self.index(INSERT), self.index(INSERT+'+1c'))
+        prev_char = self.get(self.index(INSERT+'-1c'), self.index(INSERT))
+        # print(cur_char, prev_char)
+
     def on_return(self, event=None):
-        prev_line = self.get(f"{int(self.index(INSERT).split('.')[0])}.0", INSERT)
-        # after_line = self.get(INSERT, INSERT+' lineend')
+        prev_line = self.get(INSERT + ' linestart', INSERT)
         prev_indent = int(self.find_indent(prev_line, value=self.config_dict['tab_length'])['spaces'])
-        # print(self.index('1.0 lineend'))
+        # print('"' + prev_line + '"\n', prev_indent)
 
         if prev_line.rstrip('\t').rstrip(' ').endswith(':') and not prev_line.rstrip('\t').rstrip(' ').startswith('#'):
             self.insert(INSERT, '\n')
-            self.insert(f"{int(self.index(INSERT).split('.')[0])}.0",
-                        ' '*(prev_indent+self.config_dict['tab_length']))  # +after_line)
+            self.insert(INSERT + ' linestart',
+                        ' '*(prev_indent + self.config_dict['tab_length']))  # +after_line)
             self.see(INSERT)
             return 'break'
 
         elif len(prev_line) > 0 and prev_line[-1] in ['(', '[', '{']:
 
-            if self.get(INSERT, f"{int(self.index(INSERT).split('.')[0])}."
-                                f"{int(self.index(INSERT).split('.')[1])+1}") in [')', ']', '}']:
+            if self.get(INSERT, INSERT + ' +1c') in [')', ']', '}']:
                 self.insert(INSERT, '\n')
                 self.insert(INSERT, ' '*(prev_indent+self.config_dict['tab_length']))
                 self.insert(INSERT, '\n')
@@ -401,25 +795,30 @@ class ColorText(Text):
             self.see(INSERT)
             return 'break'
 
-        elif len(prev_line) > 0 and prev_line.rstrip()[-1] in [',', '\\']:
-            ind = prev_line.rfind('(')
-            if ind < 0:
-                ind = prev_line.rfind('[')
+        elif len(prev_line) > 0 and prev_line.rstrip().rstrip('\t') != '':
+            if prev_line.rstrip()[-1] in [',', '\\']:
+                ind = prev_line.rfind('(')
                 if ind < 0:
-                    ind = prev_line.rfind('{')
-            if ind > 0:
-                self.insert(INSERT, '\n')
-                space_strip_text = self.get(INSERT, 'insert lineend')
-                self.delete(INSERT, 'insert lineend')
-                self.insert(INSERT, ' ' * (ind + 1) + space_strip_text.lstrip())
-                self.mark_set(INSERT, f'insert linestart+{ind+1}c')
+                    ind = prev_line.rfind('[')
+                    if ind < 0:
+                        ind = prev_line.rfind('{')
+                if ind > 0:
+                    self.insert(INSERT, '\n')
+                    space_strip_text = self.get(INSERT, 'insert lineend')
+                    self.delete(INSERT, 'insert lineend')
+                    self.insert(INSERT, ' ' * (ind + 1) + space_strip_text.lstrip())
+                    self.mark_set(INSERT, f'insert linestart+{ind+1}c')
+                else:
+                    self.insert(INSERT, '\n')
+                    space_strip_text = self.get(INSERT, 'insert lineend')
+                    self.delete(INSERT, 'insert lineend')
+                    self.insert(INSERT, ' ' * prev_indent + space_strip_text.lstrip())
+                    self.mark_set(INSERT, f'insert linestart+{prev_indent}c')
+                self.see(INSERT)
             else:
                 self.insert(INSERT, '\n')
-                space_strip_text = self.get(INSERT, 'insert lineend')
-                self.delete(INSERT, 'insert lineend')
-                self.insert(INSERT, ' ' * prev_indent + space_strip_text.lstrip())
-                self.mark_set(INSERT, f'insert linestart+{prev_indent}c')
-            self.see(INSERT)
+                self.insert(f"{int(self.index(INSERT).split('.')[0])}.0", ' ' * (prev_indent))
+                self.see(INSERT)
             return 'break'
 
         elif 'return' in prev_line or 'pass' in prev_line or 'continue' in prev_line or \
@@ -430,111 +829,29 @@ class ColorText(Text):
             self.see(INSERT)
             return 'break'
 
-        elif self.check_paren(prev_line) is True:
+        # elif self.check_paren(prev_line) is True:
+        #     self.insert(INSERT, '\n')
+        #     self.insert(f"{int(self.index(INSERT).split('.')[0])}.0", ' '*(prev_indent))
+        #     self.see(INSERT)
+        #     return 'break'
+
+        else:
             self.insert(INSERT, '\n')
             self.insert(f"{int(self.index(INSERT).split('.')[0])}.0", ' '*(prev_indent))
             self.see(INSERT)
             return 'break'
-        else:
-            self.insert(INSERT, '\n')
-            self.insert(f"{int(self.index(INSERT).split('.')[0])}.0", ' '*(prev_indent))
-            self.see(INSERT)
-            return 'break'
 
-    def on_home(self, event):
-        cur_line = self.get(f"{int(self.index(INSERT).split('.')[0])}.0", INSERT+' lineend')
-        if cur_line.count('\t') == 0 and cur_line.startswith(' '):
-            s1 = cur_line.lstrip()
-            cur_indent = int(len(cur_line) - len(s1))
-        else:
-            cur_indent = int(cur_line.count('\t'))
-        cur_row = int(self.index(INSERT).split('.')[0])
-
-        # print(cur_row, cur_indent, cur_line)
-        # print(self.index(INSERT), float(f'{cur_row}.{cur_indent}'))
-
-        if int(str(self.index(INSERT)).split('.')[0]) == cur_row and \
-                int(str(self.index(INSERT)).split('.')[1]) == cur_indent:
-            self.mark_set(INSERT, f'{cur_row}.0')
-            return 'break'
-
-        elif int(str(self.index(INSERT)).split('.')[0]) == cur_row and int(str(self.index(INSERT)).split('.')[1]) == 0:
-            self.mark_set(INSERT, f'{cur_row}.{cur_indent}')
-            return 'break'
-
-        else:
-            self.mark_set(INSERT, f'{cur_row}.{cur_indent}')
-
-    def on_ctrl_home(self, event):
-        self.mark_set(INSERT, index='1.0')
-
-    def on_shift_home(self, event):
-        self.tag_add('<<SelectLineStart>>', INSERT, INSERT+' linestart')
-
-    def on_tab(self, event):
-        self.insert(INSERT, ' '*self.config_dict['tab_length'])
-        return 'break'
-
-    def on_bkspace(self, event):
-        """:params: event: parameter for backspace event list"""
-        cur_ind = str(self.index(INSERT))
-        one_less_char = self.get(f"{int(cur_ind.split('.')[0])}.{int(cur_ind.split('.')[1])-1}", INSERT)
-        one_less_char_ind = f"{int(cur_ind.split('.')[0])}.{int(cur_ind.split('.')[1])-1}"
-        one_more_char = self.get(INSERT, f"{int(cur_ind.split('.')[0])}.{int(cur_ind.split('.')[1])+1}")
-        one_more_char_ind = f"{int(cur_ind.split('.')[0])}.{int(cur_ind.split('.')[1])+1}"
-        open_bracs, close_bracs = ['{', '[', '('], ['}', ']', ')']
-
-        if one_less_char in ['"', "'"]:
-            if one_more_char == one_less_char:
-                self.delete(cur_ind, one_more_char_ind)
-        elif one_less_char in open_bracs:
-            if one_more_char == close_bracs[open_bracs.index(one_less_char)]:
-                self.delete(cur_ind, one_more_char_ind)
-
-        if one_less_char.isspace() is False:
+    def on_right_key(self, event):
+        if event.state == 262145:
             return
-
-        target_ind = f"{cur_ind.split('.')[0]}.{str(int(cur_ind.split('.')[1]) - 4)}"
-        del_chars = 0
-        for i in self.get(target_ind, cur_ind):
-            if i.isspace():
-                del_chars += 1
-            elif i.isalnum():
-                del_chars -= 1
-        if del_chars <= 0:
-            del_chars = 1
-        self.delete(f"{cur_ind.split('.')[0]}.{str(int(cur_ind.split('.')[1]) - del_chars)}", self.index(INSERT))
-        return 'break'
-
-    def on_delete(self, event):
-        """:params: event: parameter for delete event list"""
-        pass
-    #     cur_ind = str(self.index(INSERT))
-    #     one_less_char = self.get(f"{int(cur_ind.split('.')[0])}.{int(cur_ind.split('.')[1]) - 1}", INSERT)
-    #     one_less_char_ind = f"{int(cur_ind.split('.')[0])}.{int(cur_ind.split('.')[1]) - 1}"
-    #     one_more_char = self.get(INSERT, f"{int(cur_ind.split('.')[0])}.{int(cur_ind.split('.')[1]) + 1}")
-    #     one_more_char_ind = f"{int(cur_ind.split('.')[0])}.{int(cur_ind.split('.')[1]) + 1}"
-    #     open_bracs, close_bracs = ['{', '[', '('], ['}', ']', ')']
-
-    def on_paste(self, event=None):
-        # cur_ind = str(self.index(INSERT))
-        # text = self.clipboard_get()
-        # lines = int(text.count('\n'))
-        # self.insert(cur_ind, text)
-        # last_ind = f"{str(int(cur_ind.split('.')[0]) + lines)}.0"
-        self.inst_trigger()
-        self.see(INSERT)
-        # return 'break'
-
-    def on_next_char(self, event):
-        cur_char = self.get(self.index(INSERT), self.index(INSERT+'+1c'))
-        next_char = self.get(self.index(INSERT+'+1c'), self.index(INSERT+'+2c'))
-        # print(cur_char, next_char)
-
-    def on_prev_char(self, event):
-        # cur_char = self.get(self.index(INSERT), self.index(INSERT+'+1c'))
-        prev_char = self.get(self.index(INSERT+'-1c'), self.index(INSERT))
-        # print(cur_char, prev_char)
+        try:
+            selection = self.tag_ranges(SEL)
+            self.mark_set(INSERT, selection[1])
+            self.tag_remove(SEL, 1.0, END)
+            self.see(INSERT)
+            return 'break'
+        except IndexError or Exception:
+            pass
 
     def on_select(self, event=None):
         if self.tag_ranges(SEL) == ():
@@ -563,51 +880,165 @@ class ColorText(Text):
     def on_select_remove(self, event=None):
         self.tag_remove('similar_selection', 1.0, END)
 
-    def find_text(self, event=None):
-        search_toplevel = Toplevel(self.root)
-        search_toplevel.title('Find Text')
-        search_toplevel.transient(self.root)
+    def on_shift_home(self, event=None):
+        old_selection_range = self.tag_ranges(SEL)
+        self.tag_remove(SEL, 1.0, END)
 
-        Label(search_toplevel, text="Find All:").grid(row=0, column=0, sticky='e')
+        cur_line = self.get(f"{int(self.index(INSERT).split('.')[0])}.0", INSERT + ' lineend')
+        if cur_line.count('\t') == 0 and cur_line.startswith(' '):
+            s1 = cur_line.lstrip()
+            indent = int(len(cur_line) - len(s1))
+        else:
+            indent = int(cur_line.count('\t'))
+        row = int(self.index(INSERT).split('.')[0])
 
-        search_entry_widget = Entry(search_toplevel, width=35)
-        search_entry_widget.grid(row=0, column=1, padx=2, pady=2, sticky='we')
-        search_entry_widget.focus_set()
-        ignore_case_value, regex_value = IntVar(), IntVar()
-        Checkbutton(search_toplevel, text='Ignore Case', variable=ignore_case_value).grid(row=1, column=1, sticky=W,
-                                                                                          padx=1,
-                                                                                          pady=2)
-        Checkbutton(search_toplevel, text='Regular Expression', variable=regex_value).grid(row=1, column=1, sticky=E,
-                                                                                           padx=2, pady=2)
-        Button(search_toplevel, text="Find All", underline=0,
-               command=lambda: self.search_output(search_entry_widget.get(), ignore_case_value.get(), self,
-                                                  search_toplevel, search_entry_widget, regex_value.get())).grid(
-            row=0, column=2, sticky=E + W, padx=2, pady=2)
+        if len(old_selection_range) == 0:
+            if int(self.index(INSERT).split('.')[1]) > indent:
+                self.tag_add(SEL, f"{row}.{indent}", self.index(INSERT))
+                self.mark_set(INSERT, f"{row}.{indent}")
 
-        def close_search_window(_event=None):
-            self.tag_remove('match', '1.0', END)
-            search_toplevel.destroy()
+            elif int(self.index(INSERT).split('.')[1]) == 0:
+                self.tag_add(SEL, f"{row}.0", f"{row}.{indent}")
+                self.mark_set(INSERT, f"{row}.{indent}")
 
-        search_toplevel.bind('<Escape>', close_search_window)
-        search_toplevel.protocol('WM_DELETE_WINDOW', close_search_window)
+            elif int(self.index(INSERT).split('.')[1]) <= indent:
+                self.tag_add(SEL, f"{row}.0", self.index(INSERT))
+                self.mark_set(INSERT, f"{row}.0")
+
+        else:
+            insert_row = int(self.index(INSERT).split('.')[0])
+            insert_column = int(self.index(INSERT).split('.')[1])
+            selection_start_row = int(old_selection_range[0].split('.')[0])
+            selection_start_column = int(old_selection_range[0].split('.')[1])
+            selection_end_row = int(old_selection_range[1].split('.')[0])
+            selection_end_column = int(old_selection_range[1].split('.')[1])
+
+            if insert_row > selection_start_row:
+                if insert_column > indent:
+                    pass
+                elif insert_column == indent:
+                    pass
+                elif insert_column <= indent:
+                    pass
+            elif insert_row == selection_start_row == selection_end_row:
+                if insert_column > indent:
+                    pass
+                elif insert_column == indent:
+                    pass
+                elif insert_column <= indent:
+                    pass
+            elif insert_row == selection_start_row:
+                if insert_column > indent:
+                    pass
+                elif insert_column == indent:
+                    pass
+                elif insert_column <= indent:
+                    pass
+            elif insert_row <= selection_start_row:
+                if insert_column > indent:
+                    pass
+                elif insert_column == indent:
+                    pass
+                elif insert_column <= indent:
+                    pass
+
+                self.tag_add(SEL, f"{old_selection_range[0]}", )
+        return 'break'
+
+    def on_shift_left(self, event=None):
+        cur_sel_ind = self.tag_ranges(SEL) if self.tag_ranges(SEL) != () else [INSERT] * 2
+        cur_ind = self.index(INSERT)
+        try:
+            if float(cur_ind) == float(str(cur_sel_ind[1])):
+                self.tag_remove(SEL, f"{cur_sel_ind[1]} -1c", f"{cur_sel_ind[1]}")
+                self.mark_set(INSERT, f"{cur_sel_ind[1]} -1c")
+            else:
+                self.tag_add(SEL, f"{cur_sel_ind[0]} -1c", f"{cur_sel_ind[1]}")
+                self.mark_set(INSERT, f"{cur_sel_ind[0]} -1c")
+        except ValueError:
+            self.tag_add(SEL, f"{cur_ind} -1c", f"{cur_ind}")
+            self.mark_set(INSERT, f"{cur_ind} -1c")
+        return 'break'
+
+    def on_shift_right(self, event=None):
+        cur_sel_ind = self.tag_ranges(SEL) if self.tag_ranges(SEL) != () else [INSERT] * 2
+        cur_ind = self.index(INSERT)
+        try:
+            if float(cur_ind) == float(str(cur_sel_ind[0])):
+                self.tag_remove(SEL, f"{cur_sel_ind[0]}", f"{cur_sel_ind[0]} +1c")
+                self.mark_set(INSERT, f"{cur_sel_ind[0]} +1c")
+            else:
+                self.tag_add(SEL, f"{cur_sel_ind[0]}", f"{cur_sel_ind[1]} +1c")
+                self.mark_set(INSERT, f"{cur_sel_ind[1]} +1c")
+        except ValueError:
+            self.tag_add(SEL, f"{cur_ind}", f"{cur_ind} +1c")
+            self.mark_set(INSERT, f"{cur_ind} +1c")
+        return 'break'
+
+    def on_tab(self, event):
+        self.insert(INSERT, ' '*self.config_dict['tab_length'])
+        return 'break'
+
+    def open_file(self, event=None):
+        input_file_name = tkinter.filedialog.askopenfile(defaultextension=".txt", filetypes=self.FILETYPES)
+        if input_file_name:
+            self.file_name = input_file_name.name
+            # self.root.title('{} - {}'.format(self.file_name, self.PROGRAM_NAME))
+            self.delete(1.0, END)
+            with open(self.file_name, encoding='utf-8') as _file:
+                try:
+                    self.insert(1.0, _file.read())
+                except UnicodeError or UnicodeTranslateError or UnicodeDecodeError or UnicodeEncodeError or\
+                        UnicodeWarning:
+                    tkinter.messagebox.showerror('Can\'t open file',
+                                                 'This error could be due to images in a file or some'
+                                                 ' characters that the program is unable to read')
+            self.inst_trigger()
+        else:
+            self.after(500, lambda _=None: self.delete(END + ' -1c', END))
+
+    def r_click(self, event):
+        """right click context menu for all Tk Entry and Text widgets"""
+        try:
+            def r_click_copy(evnt, apnd=0):
+                evnt.widget.event_generate('<Control-c>')
+
+            def r_click_cut(evnt):
+                evnt.widget.event_generate('<Control-x>')
+
+            def r_click_paste(evnt):
+                evnt.widget.event_generate('<Control-v>')
+                self.inst_trigger()
+
+            event.widget.focus()
+
+            nclst = [
+                     (' Cut', lambda evt=event: r_click_cut(evt)),
+                     (' Copy', lambda evt=event: r_click_copy(evt)),
+                     (' Paste', lambda evt=event: r_click_paste(evt)),
+            ]
+
+            rmenu = Menu(None, tearoff=0, takefocus=0)
+
+            for (txt, cmd) in nclst:
+                rmenu.add_command(label=txt, command=cmd)
+
+            rmenu.tk_popup(event.x_root+40, event.y_root+10, entry="0")
+
+        except TclError:
+            pass
         return "break"
 
-    def search_output(self, needle, if_ignore_case, _text, search_toplevel, search_box, regex):
-        _text.tag_remove('match', '1.0', END)
-        matches_found = 0
-        if needle:
-            start_pos = '1.0'
-            while True:
-                start_pos = _text.search(needle, start_pos, nocase=if_ignore_case, stopindex=END, regexp=regex)
-                if not start_pos:
-                    break
-                end_pos = '{}+{}c'.format(start_pos, len(needle))
-                _text.tag_add('match', start_pos, end_pos)
-                matches_found += 1
-                start_pos = end_pos
-            _text.tag_config('match', foreground='red', background='yellow')
-        search_box.focus_set()
-        search_toplevel.title('{} matches found'.format(matches_found))
+    def r_click_binder(self, r):
+        try:
+            for b in ['Text', 'Entry', 'Listbox', 'Label']:
+                r.bind_class(b, sequence='<ButtonRelease-3>',
+                             func=self.r_click, add='')
+                r.bind_class(b, sequence='<KeyRelease-App>',
+                             func=self.r_click, add='')
+        except TclError:
+            print(' - rClickbinder, something wrong')
+            pass
 
     def re_place(self, event=None):
         replace_toplevel = Toplevel(self.root)
@@ -656,6 +1087,12 @@ class ColorText(Text):
         self.inst_trigger()
         return "break"
 
+    def redo_event(self, event=None):
+        self.event_generate('<<Redo>>')
+        # self.edit_redo()
+        self.inst_trigger()
+        return 'break'
+
     def replace_output(self, _find, _replace, _text, ignore, replace_box, regex):
         _text.tag_remove('match', '1.0', END)
         matches_found = 0
@@ -673,76 +1110,60 @@ class ColorText(Text):
             _text.tag_config('match', foreground='red', background='yellow')
             replace_box.title(f'{matches_found} matches replaced')
 
-    # def execute(self, event=None):
-        # output = Toplevel(self, width=200, height=200)
-        # output.title('Output Window')
-        # output_win = Console(output, locals(), output.destroy)
+    def save(self, event=None):
+        if not self.file_name:
+            self.save_as()
+        else:
+            self.write_to_file(self.file_name)
+        return "break"
 
-        # if self.executing is True:
-            # self.save()
-            # code = self.get('1.0', END + '-1c')
-            # stdin = sys.stdin
-            # stdout = sys.stdout
-            # stderr = sys.stderr
+    def save_as(self, event=None):
+        input_file_name = tkinter.filedialog.asksaveasfile(defaultextension=".py", filetypes=self.FILETYPES)
+        if input_file_name:
+            self.file_name = input_file_name.name
+            self.write_to_file(self.file_name)
+            # self.root.title('{} - {}'.format(self.file_name, self.PROGRAM_NAME))
+        return "break"
 
-            # sys.stdout = StdoutRedirector(output_win)
-            # sys.stderr = StdoutRedirector(output_win)
-
-            # interp = InteractiveInterpreter()
-            # interp.runcode(code)
-
-            # sys.stdout = stdout
-            # sys.stderr = stderr
-            # sys.stdin = stdin
-        # else:
-            # self.save()
-
-            # self.executing = True
-            # output_win.pack(side=BOTTOM, expand=TRUE, fill=BOTH)
-
-            # code = self.get('1.0', END + '-1c')
-            # stdin = sys.stdin
-            # stdout = sys.stdout
-            # stderr = sys.stderr
-
-            #    def a():
-            #        sys.stdin = StdinRedirector(output)
-            #    output.bind('<Return>', lambda: a)
-
-            # sys.stdout = StdoutRedirector(output_win)
-            # sys.stderr = StdoutRedirector(output_win)
-
-            # interp = InteractiveInterpreter()
-            # interp.runcode(code)
-
-            # sys.stdout = stdout
-            # sys.stderr = stderr
-            # sys.stdin = stdin
-
-    def _any(self, name, alternates):
-        """Return a named group pattern matching list of alternates."""
-        return "(?P<%s>" % name + "|".join(alternates) + ")"
+    def search_output(self, needle, if_ignore_case, _text, search_toplevel, search_box, regex):
+        self.last_find_word = needle
+        _text.tag_remove('match', '1.0', END)
+        matches_found = 0
+        if needle:
+            start_pos = '1.0'
+            while True:
+                start_pos = _text.search(needle, start_pos, nocase=if_ignore_case, stopindex=END, regexp=regex)
+                if not start_pos:
+                    break
+                end_pos = '{}+{}c'.format(start_pos, len(needle))
+                _text.tag_add('match', start_pos, end_pos)
+                matches_found += 1
+                start_pos = end_pos
+            _text.tag_config('match', foreground='red', background='yellow')
+        search_box.focus_set()
+        search_toplevel.title('{} matches found'.format(matches_found))
 
     def sort_regex(self):
         """Returns a compiled list of all the regex alternates for group pattern matching"""
 
         # Regex for list of Python keywords
-        kw = r"\b" + self._any("KEYWORD", keyword.kwlist) + r"\b"
+        kw = r"\b" + self._any("KEYWORD", list(keyword.kwlist)) + r"\b"
 
         # Regex for list of Python built-in functions
         builtinlist = [str(name) for name in dir(builtins) if not name.startswith('_') and name not in keyword.kwlist]
-        builtin = r"([^.'\"\\#]\b|^)" + self._any("BUILTIN", builtinlist) + r"\b"
+        builtin = r"([^=.'\"\\#]\b|^)" + self._any("BUILTIN", builtinlist) + r"\b"
 
         # Regex for comments
         comment = self._any("COMMENT", [r"#[^\n]*|@[^ ][^\n][^ ]*"])
 
         # Regex for Python strings
-        stringprefix = r"(\bB|b|br|Br|bR|BR|rb|rB|Rb|RB|r|u|R|U)?"
+        stringprefix = r"(\bB|b|br|Br|bR|BR|rb|rB|Rb|RB|r|u|R|U|f|F|fr|Fr|fR|FR|rf|rF|Rf|RF)?"
+        sq3string = stringprefix + r"(''')[^'\\]*((\\.|'(?!''))[^'\\]*)*(''')?"
+        dq3string = stringprefix + r'(""")[^"\\]*((\\.|"(?!""))[^"\\]*)*(""")?'
         sqstring = stringprefix + r"'[^'\\\n]*(\\.[^'\\\n]*)*'?"
         dqstring = stringprefix + r'"[^"\\\n]*(\\.[^"\\\n]*)*"?'
-        sq3string = stringprefix + r"'''[^'\\]*((\\.|'(?!''))[^'\\]*)*(''')?"
-        dq3string = stringprefix + r'"""[^"\\]*((\\.|"(?!""))[^"\\]*)*(""")?'
-        string = self._any("STRING", [sq3string, dq3string, sqstring, dqstring])
+        string = self._any("STRING", [sqstring, dqstring])
+        ml_string = self._any("ML_STRING", [sq3string, dq3string])
 
         # Regex for natural, exponential, decimal, hexadecimal numbers
         numbers = self._any(
@@ -750,139 +1171,81 @@ class ColorText(Text):
                         ])
 
         # Regex for special characters
-        speciallist = ['=', '@', '-', ':', '<', '>', r'[+]', r'[*]', r'[.]', r'[!]', r'[%]', r'[\\]']
+        speciallist = ['=', '-', '<', '>', r'[+]', r'[*]', r'[!]', r'[%]', r'[\\]']
         special = self._any("SPECIAL", speciallist)
 
         # Regex for brackets
-        bracketlist = [r'[(]', r'[)]', r'[{]', r'[}]', r'[[]', r'[]]']
+        bracketlist = [r'\(', r'\)', r'\{', r'\}', r'\[', r'\]']
         bracket = self._any("BRACKET", bracketlist)
 
-        # definitions = self._any("CLASSDEF", [r"(\bdef|class)?[^'\\\n]*(\\.[^'\\\n]*)*(:\b)?"])
-
-        # Regex for module list on a system
-        modules = r"([^.'\"\\#]\b|^)" + self._any('MODULES', self.module_list) + r"\b"
+        definitions = self._any("FUNCTIONS", [r'([^=\^!@#$%&*;,?/\\><"\'\[{\]}~`.|:\s]+)(?=(\())'])
+        # r"(\bdef|class)?[^'\\\n]*(\\.[^'\\\n]*)*(:\b)?"])
 
         # Regex for Python dunders or double underlined keywords
-        dunder_list = ['__abs__', '__add__', '__and__', '__bool__', '__ceil__', '__class__', '__contains__',
-                       '__delattr__', '__delitem__', '__dir__', '__divmod__', '__doc__', '__eq__', '__float__',
-                       '__floor__', '__floordiv__', '__format__', '__ge__', '__getattribute__', '__getitem__',
-                       '__getnewargs__', '__gt__', '__hash__', '__index__', '__iadd__', '__imul__', '__init__',
-                       '__init_subclass__', '__int__', '__invert__', '__iter__', '__le__', '__len__', '__lshift__',
-                       '__lt__', '__mod__', '__mul__', '__name__', '__ne__', '__neg__', '__new__', '__or__', '__pos__',
-                       '__pow__', '__qualname__', '__radd__', '__rand__', '__rdivmod__', '__reduce__', '__reduce_ex__',
-                       '__repr__', '__reversed__', '__rfloordiv__', '__rlshift__', '__rmod__', '__rmul__', '__ror__',
-                       '__round__', '__rpow__', '__rrshift__', '__rshift__', '__rsub__', '__rtruediv__', '__rxor__',
-                       '__self__', '__setattr__', '__setitem__', '__sizeof__', '__str__', '__sub__', '__subclasshook__',
-                       '__text_signature__', '__truediv__', '__trunc__', '__xor__', '__weakref__', 'self']
-        dunder = self._any("DUNDER", [fr'\b{i}\b' for i in dunder_list])
+        # dunder_list = ['__abs__', '__add__', '__and__', '__bool__', '__ceil__', '__class__', '__contains__',
+        #                '__delattr__', '__delitem__', '__dir__', '__divmod__', '__doc__', '__eq__', '__float__',
+        #                '__floor__', '__floordiv__', '__format__', '__ge__', '__getattribute__', '__getitem__',
+        #                '__getnewargs__', '__gt__', '__hash__', '__index__', '__iadd__', '__imul__', '__init__',
+        #                '__init_subclass__', '__int__', '__invert__', '__iter__', '__le__', '__len__', '__lshift__',
+        #               '__lt__', '__mod__', '__mul__', '__name__', '__ne__', '__neg__', '__new__', '__or__', '__pos__',
+        #               '__pow__', '__qualname__', '__radd__', '__rand__', '__rdivmod__', '__reduce__', '__reduce_ex__',
+        #                '__repr__', '__reversed__', '__rfloordiv__', '__rlshift__', '__rmod__', '__rmul__', '__ror__',
+        #                '__round__', '__rpow__', '__rrshift__', '__rshift__', '__rsub__', '__rtruediv__', '__rxor__',
+        #              '__self__', '__setattr__', '__setitem__', '__sizeof__', '__str__', '__sub__', '__subclasshook__',
+        #                '__text_signature__', '__truediv__', '__trunc__', '__xor__', '__weakref__', 'self']
+        dunder = self._any("DUNDER", [r'__([^\s]+)__', r'self'])    # fr'\b{i}\b' for i in dunder_list])
+
+        # whitespace = self._any("WHITESPACE", [' '])
 
         # r_link_s = r'(https?://\S+)'
         # r_link_uns = r'(http?://\S+)'
         # w_link = r'(www(.).*(.).*)'
-        # URL_REGEX = r"""(?i)\b((?:https?:(?:/{1,3}|[a-z0-9%])|[a-z0-9.\-]+[.](?:com|net|org|edu|gov|mil|aero|asia|biz|cat|coop|info|int|jobs|mobi|museum|name|post|pro|tel|travel|xxx|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cs|cu|cv|cx|cy|cz|dd|de|dj|dk|dm|do|dz|ec|ee|eg|eh|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|mm|mn|mo|mp|mq|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|om|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ro|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|Ja|sk|sl|sm|sn|so|sr|ss|st|su|sv|sx|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw)/)(?:[^\s()<>{}\[\]]+|\([^\s()]*?\([^\s()]+\)[^\s()]*?\)|\([^\s]+?\))+(?:\([^\s()]*?\([^\s()]+\)[^\s()]*?\)|\([^\s]+?\)|[^\s`!()\[\]{};:\'\".,<>?])|(?:(?<!@)[a-z0-9]+(?:[.\-][a-z0-9]+)*[.](?:com|net|org|edu|gov|mil|aero|asia|biz|cat|coop|info|int|jobs|mobi|museum|name|post|pro|tel|travel|xxx|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cs|cu|cv|cx|cy|cz|dd|de|dj|dk|dm|do|dz|ec|ee|eg|eh|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|mm|mn|mo|mp|mq|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|om|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ro|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|Ja|sk|sl|sm|sn|so|sr|ss|st|su|sv|sx|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw)\b/?(?!@)))"""
+        # URL_REGEX = r"""(?i)\b((?:https?:(?:/{1,3}|[a-z0-9%])|[a-z0-9.\-]+[.](?:com|net|org|edu|gov|mil|aero|asia|
+        # biz|cat|coop|info|int|jobs|mobi|museum|name|post|pro|tel|travel|xxx|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|
+        # as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|
+        # cn|co|cr|cs|cu|cv|cx|cy|cz|dd|de|dj|dk|dm|do|dz|ec|ee|eg|eh|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|
+        # gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|
+        # kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|mm|mn|mo|mp|mq|mr|
+        # ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|om|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|
+        # qa|re|ro|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|Ja|sk|sl|sm|sn|so|sr|ss|st|su|sv|sx|sy|sz|tc|td|tf|tg|th|tj|
+        # tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw)/)
+        # (?:[^\s()<>{}\[\]]+|\([^\s()]*?\([^\s()]+\)[^\s()]*?\)|\([^\s]+?\))+(?:\([^\s()]*?\([^\s()]+\)[^\s()]*?\)
+        # |\([^\s]+?\)|[^\s`!()\[\]{};:\'\".,<>?])|(?:(?<!@)[a-z0-9]+(?:[.\-][a-z0-9]+)*[.](?:com|net|org|edu|gov|
+        # mil|aero|asia|biz|cat|coop|info|int|jobs|mobi|museum|name|post|pro|tel|travel|xxx|ac|ad|ae|af|ag|ai|al|
+        # am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg
+        # |ch|ci|ck|cl|cm|cn|co|cr|cs|cu|cv|cx|cy|cz|dd|de|dj|dk|dm|do|dz|ec|ee|eg|eh|er|es|et|eu|fi|fj|fk|fm|fo|
+        # fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is
+        # |it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|
+        # mm|mn|mo|mp|mq|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|om|pa|pe|pf|pg|ph|pk|pl|pm|
+        # pn|pr|ps|pt|pw|py|qa|re|ro|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|Ja|sk|sl|sm|sn|so|sr|ss|st|su|sv|sx|sy|sz|
+        # tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|
+        # za|zm|zw)\b/?(?!@)))"""
         # link = self._any("LINK", [URL_REGEX])
 
-        return kw + "|" + builtin + "|" + comment + '|' + string + "|" + numbers + '|' + special + '|' + bracket +\
-            '|' + modules + '|' + dunder + '|' + self._any("SYNC", [r"\n"])
+        return kw + "|" + builtin + "|" + comment + '|' + ml_string + '|' + string + '|' + numbers + '|' + special +\
+            '|' + bracket + '|' + dunder + '|' + definitions + '|' + self._any("SYNC", [r"\n"])
 
-    def _coordinate(self, start, end, string):
-        """Returns indices of the start and end of matched `string`"""
-        srow = string[:start].count('\n') + 1
-        scolsplitlines = string[:start].split('\n')
-
-        if len(scolsplitlines) != 0:
-            scolsplitlines = scolsplitlines[len(scolsplitlines) - 1]
-
-        scol = len(scolsplitlines)
-        lrow = string[:end + 1].count('\n') + 1
-        lcolsplitlines = string[:end].split('\n')
-
-        if len(lcolsplitlines) != 0:
-            lcolsplitlines = lcolsplitlines[len(lcolsplitlines) - 1]
-
-        lcol = len(lcolsplitlines) + 1
-
-        return '{}.{}'.format(srow, scol), '{}.{}'.format(lrow, lcol)
-
-    def check(self, k: dict):
-        font = list(self.config_dict['color_text_font'])
-        if k['COMMENT'] is not None:
-            return (
-                'comment', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['comment'][0],
-                f"{font[0]} {font[1]}" +
-                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['comment'][1]}")
-
-        elif k['BUILTIN'] is not None:
-            return (
-                'builtin', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['builtin'][0],
-                f"{font[0]} {font[1]}" +
-                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['builtin'][1]}")
-
-        elif k['STRING'] is not None:
-            return (
-                'string', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['string'][0],
-                f"{font[0]} {font[1]}" +
-                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['string'][1]}")
-
-        elif k['KEYWORD'] is not None:
-            return (
-                'keyword', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['keyword'][0],
-                f"{font[0]} {font[1]}" +
-                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['keyword'][1]}")
-
-        elif k['NUMBERS'] is not None:
-            return (
-                'numbers', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['numbers'][0],
-                f"{font[0]} {font[1]}" +
-                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['numbers'][1]}")
-
-        elif k['SPECIAL'] is not None:
-            return (
-                'special', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['special'][0],
-                f"{font[0]} {font[1]}" +
-                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['special'][1]}")
-
-
-        elif k['BRACKET'] is not None:
-            return (
-                'bracket', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['bracket'][0],
-                f"{font[0]} {font[1]}" +
-                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['bracket'][1]}")
-
-        elif k['MODULES'] is not None:
-            return (
-                'modules', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['modules'][0],
-                f"{font[0]} {font[1]}" +
-                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['modules'][1]}")
-
-        elif k['DUNDER'] is not None:
-            return (
-                'dunder', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['dunder'][0],
-                f"{font[0]} {font[1]}" +
-                f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['dunder'][1]}")
-
-        # elif k['CLASSDEF'] is not None:
-        #     return 'classdef', '#0000ff'
-
-        # elif k['LINK'] is not None:
-        #     return (
-        #         'link', self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['link'][0],
-        #         f"{font[0]} {font[1]}" +
-        #         f" {self.config_dict['text_theme_settings'][self.config_dict['selected_theme']]['link'][1]}")
-        else:
-            return 'ss', 'NILL', 'NILL'
-
-    def binding_functions_configuration(self):
-        self.storeobj['ColorLight'] = self.trigger
-        return
+    def toggle_highlight(self, event=None):
+        select = self.tag_ranges(SEL)
+        # print(select, len(select))
+        if len(select) > 0:
+            self.highlight_current_line(False)
+            return
+        self.highlight_current_line(self.config_dict['highlight_current_line'])
 
     def trigger(self, event=None):
+        # insert_ind = self.index(INSERT)
         val = self.get(INSERT + ' linestart', INSERT + ' lineend')
+        # val = val.replace(' ', '•')
+        # self.delete(INSERT + ' linestart', INSERT + ' lineend')
+        # self.insert(f"{insert_ind} linestart", val)
+        # self.mark_set(INSERT, insert_ind)
         # print(val, self.text.index(INSERT+' linestart'), self.text.index(INSERT+' lineend'))
         if len(val) == 1:
             return
 
-        for i in ['comment', 'builtin', 'string', 'keyword', 'numbers', 'special', 'bracket', 'modules', 'dunder']:
+        for i in ['comment', 'builtin', 'string', 'ml_string', 'keyword', 'numbers', 'special', 'bracket',
+                  'dunder', 'functions']:
             self.tag_remove(i, INSERT + ' linestart', INSERT + ' lineend')
 
         for i in self.textfilter.finditer(val):
@@ -895,8 +1258,95 @@ class ColorText(Text):
                 self.tag_add(tagtype,
                              f"{int(self.index(INSERT).split('.')[0])}.{str(ind1).split('.')[1]}",
                              f"{int(self.index(INSERT).split('.')[0])}.{str(ind2).split('.')[1]}")
+                # if tagtype == 'whitespace':
+                #     self.tag_config('whitespace', background=color, font=font_style)
                 self.tag_config(tagtype, foreground=color, font=font_style)
                 # print('tagtype:', tagtype, 'ind1:', ind1, 'ind2:', ind2, 'start:', start, 'end:', end, 'val:',val)
+
+        # whiteSlist = self.tag_ranges('whitespace')
+        # for i in range(len(whiteSlist)):
+        #     if i % 2 == 0:
+        #         self.delete(whiteSlist[i], whiteSlist[i+1])
+        #         self.insert(whiteSlist[i], '•')
+        #         self.tag_add('whitespace', whiteSlist[i], whiteSlist[i+1])
+        #     else:
+        #         pass
+
+    def undo_event(self, event=None):
+        self.event_generate('<<Undo>>')
+        # self.edit_undo()
+        self.inst_trigger()
+        return 'break'
+
+    def up_date(self, event=None):
+        with open('config.json', 'w') as _file:
+            json_object = json.dumps(self.config_dict, indent=4)
+            _file.write(json_object)
+            _file.close()
+        with open('config.json') as _file:
+            self.config_dict = json.load(_file)
+        self.theme = self.config_dict['themes'][self.config_dict['selected_theme']].split('.')
+        self.config(fg=self.theme[0], bg=self.theme[1], insertbackground=self.theme[2])
+        #           tabs=str(0.95*(int(self.config_dict['tab_length'])/4))+'c')
+
+        # self.linenumbers.id.config(fill=self.theme[0])
+        # print(self.dlineinfo(INSERT))
+
+        self.after(1500, self.up_date)
+
+    def write_to_file(self, _file_name):
+        try:
+            content = self.get(1.0, 'end')
+            with open(_file_name, 'w') as the_file:
+                the_file.write(content)
+        except IOError:
+            tkinter.messagebox.showwarning("Save", "Could not save the file.")
+
+    # def execute(self, event=None):
+    #     output = Toplevel(self, width=200, height=200)
+    #     output.title('Output Window')
+    #     output_win = Console(output, locals(), output.destroy)
+    #
+    #     if self.executing is True:
+    #         self.save()
+    #         code = self.get('1.0', END + '-1c')
+    #         stdin = sys.stdin
+    #         stdout = sys.stdout
+    #         stderr = sys.stderr
+    #
+    #         sys.stdout = StdoutRedirector(output_win)
+    #         sys.stderr = StdoutRedirector(output_win)
+    #
+    #         interp = InteractiveInterpreter()
+    #         interp.runcode(code)
+    #
+    #         sys.stdout = stdout
+    #         sys.stderr = stderr
+    #         sys.stdin = stdin
+    #     else:
+    #         self.save()
+    #
+    #         self.executing = True
+    #         output_win.pack(side=BOTTOM, expand=TRUE, fill=BOTH)
+    #
+    #         code = self.get('1.0', END + '-1c')
+    #         stdin = sys.stdin
+    #         stdout = sys.stdout
+    #         stderr = sys.stderr
+    #
+    #            def a():
+    #                sys.stdin = StdinRedirector(output)
+    #            output.bind('<Return>', lambda: a)
+    #
+    #         sys.stdout = StdoutRedirector(output_win)
+    #         sys.stderr = StdoutRedirector(output_win)
+    #
+    #         interp = InteractiveInterpreter()
+    #         interp.runcode(code)
+    #
+    #         sys.stdout = stdout
+    #         sys.stderr = stderr
+    #         sys.stdin = stdin
 
     # def color_code_block(self, event=None):
     #     self.update()
@@ -914,136 +1364,6 @@ class ColorText(Text):
     #     # print(cur_ind_bbox)
     #     self.after(5000, self.color_code_block)
 
-    def inst_trigger(self, event=None, start='1.0', stop=END):
-        val = self.get(start, stop)
-        if len(val) == 1:
-            return
-
-        for i in ['comment', 'builtin', 'string', 'keyword', 'numbers', 'special', 'bracket', 'modules', 'dunder']:
-            self.tag_remove(start, stop)
-
-        for i in self.textfilter.finditer(val):
-            _start = i.start()
-            end = i.end() - 1
-            tagtype, color, font_style = self.check(k=i.groupdict())
-            # print(tagtype, color, font_style)
-            if color != 'NILL':
-                ind1, ind2 = self._coordinate(start=_start, end=end, string=val)
-                self.tag_add(tagtype, ind1, ind2)
-                self.tag_config(tagtype, foreground=color, font=font_style)
-            # self.tag_bind('link', '<Control-Button-1>', self.open_link)
-            # self.tag_bind('link', '<Double-1>', self.open_link)
-            # self.tag_configure('link', foreground='#0000ff')
-            # self.tag_raise('link', 'string')
-            # self.tag_raise('link', 'comment')
-        return 'break'
-
-    def mechanise(self):
-        self.tk.eval('''
-        proc widget_interceptor {widget command args} {
-            set orig_call [uplevel 1 [linsert $args 0 $command]]
-            if {
-                [lindex $args 0] in {insert delete replace} ||
-                ([lrange $args 0 2] == {mark set insert}) || 
-                ([lrange $args 0 1] == {xview moveto}) ||
-                ([lrange $args 0 1] == {xview scroll}) ||
-                ([lrange $args 0 1] == {yview moveto}) ||
-                ([lrange $args 0 1] == {yview scroll})
-            } then {
-                event generate $widget <<Changed>>
-            }
-            #return original command
-            return $orig_call
-        }
-        proc install_widget_interceptor {widget} {
-            global unique_widget_id
-            set handle ::_intercepted_widget_[incr unique_widget_id]
-            rename $widget $handle
-            interp alias {} ::$widget {} widget_interceptor $widget $handle
-        }
-        ''')
-        self.tk.eval('''
-        install_widget_interceptor {widget}
-        '''.format(widget=str(self)))
-        return
-
-    def _set_(self):
-        self.linenumbers.connect(self)
-        self.linenumbers.pack(side=LEFT, fill=Y)
-        return
-
-    def changed(self, event):
-        self.linenumbers.re_render()
-        return
-
-    def binding_keys(self):
-        for key in ['<Down>', '<Up>', "<<Changed>>", "<Configure>", '<Home>', '<End>', '<Prior>', '<Control_L>',
-                    '<Next>', '<Control_R>']:
-            self.bind(key, self.changed)
-        self.linenumbers.bind('<Button-1>', self.linenumbers.get_breakpoint_number)
-        return
-
-
-    def r_click(self, event):
-        """right click context menu for all Tk Entry and Text widgets"""
-        try:
-            def r_click_copy(evnt, apnd=0):
-                evnt.widget.event_generate('<Control-c>')
-
-            def r_click_cut(evnt):
-                evnt.widget.event_generate('<Control-x>')
-
-            def r_click_paste(evnt):
-                evnt.widget.event_generate('<Control-v>')
-                self.inst_trigger()
-
-            event.widget.focus()
-
-            nclst = [
-                     (' Cut', lambda evt=event: r_click_cut(evt)),
-                     (' Copy', lambda evt=event: r_click_copy(evt)),
-                     (' Paste', lambda evt=event: r_click_paste(evt)),
-            ]
-
-            rmenu = Menu(None, tearoff=0, takefocus=0)
-
-            for (txt, cmd) in nclst:
-                rmenu.add_command(label=txt, command=cmd)
-
-            rmenu.tk_popup(event.x_root+40, event.y_root+10, entry="0")
-
-        except TclError:
-            pass
-        return "break"
-
-    def r_click_binder(self, r):
-        try:
-            for b in ['Text', 'Entry', 'Listbox', 'Label']:
-                r.bind_class(b, sequence='<Button-3>',
-                             func=self.r_click, add='')
-                r.bind_class(b, sequence='<KeyPressed-App>',
-                             func=self.r_click, add='')
-        except TclError:
-            print(' - rClickbinder, something wrong')
-            pass
-
-    def linenum_width(self, event=None):
-        if self.linenumbers.temp is not None:
-            self.linenumbers.configure(width=len(self.linenumbers.temp.split('.')[0])*10+5, bg=self.theme[1])
-        self.after(10, self.linenum_width)
-
-    def up_date(self, event=None):
-        with open('config.json') as _file:
-            self.config_dict = json.load(_file)
-        self.theme = self.config_dict['themes'][self.config_dict['selected_theme']].split('.')
-        self.config(fg=self.theme[0], bg=self.theme[1], insertbackground=self.theme[2])
-        #           tabs=str(0.95*(int(self.config_dict['tab_length'])/4))+'c')
-        
-        # self.linenumbers.id.config(fill=self.theme[0])
-        # print(self.dlineinfo(INSERT))
-
-        self.after(1500, self.up_date)
-
 
 class TestApp(Tk):
     def __init__(self, *args, **kwargs):
@@ -1051,9 +1371,11 @@ class TestApp(Tk):
         
         Tk.__init__(self, *args, **kwargs)
         self.overrideredirect(True)
+        self.geometry('700x500+10+10')
         self.minsize(193, 109)
         self.x = None
         self.y = None
+        self.win_press = False
 
         self.frame = Frame(self, bg='gray38')
         self.frame.pack(side=TOP, fill=X)
@@ -1106,6 +1428,11 @@ class TestApp(Tk):
         self.name.bind("<B1-Motion>", self.do_move)
         self.name.bind('<Double-1>', self.maximize_win)
 
+        self.bind('<KeyPress-Win_L>', self.on_win_press)
+        self.bind('<KeyRelease-Win_L>', self.on_win_release)
+        self.bind('<Up>', self.on_up)
+        self.bind('<Down>', self.on_down)
+
     def start_move(self, event):
         self.x = event.x
         self.y = event.y
@@ -1149,6 +1476,28 @@ class TestApp(Tk):
     def on_deiconify(self, event):
         self.overrideredirect(True)
         set_appwindow(root=self)
+
+    def on_win_press(self, event):
+        self.win_press = True
+        # print(self.win_press)
+
+    def on_win_release(self, event):
+        self.win_press = False
+        # print(self.win_press)
+
+    def on_up(self, event):
+        if self.win_press is True:
+            self.maximize_win()
+            return 'break'
+
+    def on_down(self, event):
+        if self.win_press is True:
+            if self.state() == 'zoomed':
+                self.maximize_win()
+                return 'break'
+            elif self.state() == 'normal':
+                self.minimize_win()
+                return 'break'
 
 
 def set_appwindow(root):

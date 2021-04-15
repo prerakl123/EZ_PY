@@ -4,6 +4,8 @@ import tkinter.ttk as ttk
 import json
 import tkinter.messagebox as tk_mb
 import tkinter.filedialog as tk_fd
+import windnd
+import chardet
 # importing console, theme window, *.md reader, and Python Editor
 from MDText import MDText
 from HandyConsole import Console as TextConsole
@@ -11,6 +13,7 @@ from ColorText import ColorText
 from ThemeSelection import ThemeWin
 from Tooltip import ToolTip
 from ttkthemes import ThemedTk
+
 
 
 # json configuration file
@@ -133,7 +136,7 @@ class CustomNotebook(ttk.Notebook):
         ctt = ColorTextTab(master=self, bd=1, highlightthickness=1, highlightbackground='black')
 
         if _file is not None:
-            fn = _file_name.rsplit('/')[-1]
+            fn = _file_name.rsplit('\\')[-1] or _file_name.rsplit('/')[-1]
 
             ctt.pack(side=TOP, fill=BOTH, expand=YES)
             ctt.colortext.insert(END, _file)
@@ -145,9 +148,9 @@ class CustomNotebook(ttk.Notebook):
             self.add(ctt, text=fn)
         else:
             def dragwin(evt):
-                x = new_win.winfo_pointerx() - _offsetx
-                y = new_win.winfo_pointery() - _offsety
-                new_win.geometry('+{x}+{y}'.format(x=x, y=y))
+                _x = new_win.winfo_pointerx() - _offsetx
+                _y = new_win.winfo_pointery() - _offsety
+                new_win.geometry('+{x}+{y}'.format(x=_x, y=_y))
 
             def clickwin(evt):
                 nonlocal _offsetx, _offsety
@@ -286,9 +289,9 @@ class CustomNotebook(ttk.Notebook):
         self.update()
 
         def dragwin(evt):
-            x = sf_root.winfo_pointerx() - _offsetx
-            y = sf_root.winfo_pointery() - _offsety
-            sf_root.geometry('+{x}+{y}'.format(x=x, y=y))
+            _x = sf_root.winfo_pointerx() - _offsetx
+            _y = sf_root.winfo_pointery() - _offsety
+            sf_root.geometry('+{x}+{y}'.format(x=_x, y=_y))
 
         def clickwin(evt):
             nonlocal _offsetx, _offsety
@@ -366,6 +369,25 @@ class CustomNotebook(ttk.Notebook):
         sf_root.geometry('{}x{}+{}+{}'.format(width, height, x, y))
         
         sf_root.focus_force()
+
+    def find_encoding(self, file_path, n_lines=20) -> str:
+        with open(file_path, 'rb') as f:
+            rawdata = b''.join([f.readline() for _ in range(n_lines)])
+        return chardet.detect(rawdata)['encoding']
+
+    def drag_n_drop(self, files):
+        file_names = []
+        file_names.extend([i.decode('utf-8') for i in files])
+        for i in file_names:
+            file_encoding = self.find_encoding(i)
+            extension = i.split('/')[-1].split('.')[-1] or i.split('\\')[-1].split('.')[-1]
+            with open(i, 'r', encoding=file_encoding) as the_file:
+                if extension.lower() == 'py':
+                    self.add_py_tab(_file=the_file.read(), _file_name=i)
+                elif extension.lower() == 'md':
+                    self.add_md(_file=the_file.read(), _file_name=i)
+                else:
+                    self.add_file_tab(_file=the_file.read(), _file_name=i)
 
 
 class ColorTextTab(Frame):
@@ -680,7 +702,7 @@ def theme_settings(event, root):
 
 def main():
     root = ThemedTk(fonts=True, themebg=True)
-    root.set_theme('arc')
+    root.set_theme(root.themes[9])
     root.minsize(400, 400)
     root.geometry('700x600+40+0')
     root.title('EZ_PY')
@@ -708,6 +730,7 @@ def main():
     themes.bind('<Leave>', lambda a=None: themes.config(fg='blue'))
     themes.bind('<Button-1>', lambda e: theme_settings(e, root=root))
     ez_py.focus_force()
+    windnd.hook_dropfiles(root, func=ez_py.drag_n_drop)
     root.mainloop()
 
 

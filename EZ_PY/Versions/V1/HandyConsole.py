@@ -18,8 +18,8 @@ class Console(tk.Frame):
 
         consolepath = os.path.join(os.path.dirname(__file__), "console.py")
 
-        self.p = subprocess.Popen(["jupyter", "qtconsole"], stdout=subprocess.PIPE, stdin=subprocess.PIPE,
-                                  stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
+        self.p = subprocess.Popen(["python", consolepath], stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+                                  stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)    # ["jupyter", "qtconsole"]
 
         # make queues for keeping stdout and stderr whilst it is transferred between threads
         self.outQueue = queue.Queue()

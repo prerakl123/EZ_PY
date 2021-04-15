@@ -1,6 +1,7 @@
-from time import time, localtime, strftime
+from time import time
 import tkinter as tk
 from tkinter import *
+import json
 
 
 class ToolTip(tk.Toplevel):
@@ -44,7 +45,10 @@ class ToolTip(tk.Toplevel):
             self.msgVar.set('No message provided')
         else:
             self.msgVar.set(msg)
-            
+
+        with open('config.json', 'r') as file:
+            self.config_dict = json.load(file)
+
         self.msgFunc = msgFunc
         self.delay = delay
         self.follow = follow

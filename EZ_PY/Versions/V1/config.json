@@ -16,7 +16,7 @@
         "Cobalt Blue": "#ffffBB.#3333aa.#FFFFFF.#0000FF.gray70",
         "Olive Green": "#D1E7E0.#5B8340.#FFFFFF.#99BB66.gray70",
         "Night Mode": "#FFFFFF.gray20.#FFFFFF.#0000FF.gray50",
-        "High Contrast": "#FFFFFF.#000000.#FFFFFF.#0000FF.gray20"
+        "High Contrast": "#FFFFFF.#000000.#FFFFFF.#1E1E4A.gray20"
     },
     "selected_theme": "High Contrast",
     "highlight_current_line": true,
@@ -34,6 +34,10 @@
             "string": [
                 "#089e08",
                 "normal"
+            ],
+            "ml_string": [
+                "#089e08",
+                "italic"
             ],
             "keyword": [
                 "#cf8300",
@@ -62,6 +66,14 @@
             "link": [
                 "blue",
                 "italic"
+            ],
+            "functions": [
+                "#0088c2",
+                "normal"
+            ],
+            "whitespace": [
+                "gray30",
+                "normal"
             ]
         },
         "Greygarious": {
@@ -78,6 +90,10 @@
                 "",
                 "normal"
             ],
+            "ml_string": [
+                "",
+                "italic"
+            ],
             "keyword": [
                 "",
                 "italic"
@@ -105,6 +121,14 @@
             "link": [
                 "blue",
                 "italic"
+            ],
+            "functions": [
+                "#0088c2",
+                "normal"
+            ],
+            "whitespace": [
+                "gray30",
+                "normal"
             ]
         },
         "Aquamarine": {
@@ -121,6 +145,10 @@
                 "",
                 "normal"
             ],
+            "ml_string": [
+                "",
+                "italic"
+            ],
             "keyword": [
                 "",
                 "italic"
@@ -148,6 +176,14 @@
             "link": [
                 "blue",
                 "italic"
+            ],
+            "functions": [
+                "#0088c2",
+                "normal"
+            ],
+            "whitespace": [
+                "gray30",
+                "normal"
             ]
         },
         "Bold Beige": {
@@ -164,6 +200,10 @@
                 "",
                 "normal"
             ],
+            "ml_string": [
+                "",
+                "italic"
+            ],
             "keyword": [
                 "",
                 "italic"
@@ -191,6 +231,14 @@
             "link": [
                 "blue",
                 "italic"
+            ],
+            "functions": [
+                "#0088c2",
+                "normal"
+            ],
+            "whitespace": [
+                "gray30",
+                "normal"
             ]
         },
         "Cobalt Blue": {
@@ -207,6 +255,10 @@
                 "",
                 "normal"
             ],
+            "ml_string": [
+                "",
+                "italic"
+            ],
             "keyword": [
                 "",
                 "italic"
@@ -234,6 +286,14 @@
             "link": [
                 "blue",
                 "italic"
+            ],
+            "functions": [
+                "#0088c2",
+                "normal"
+            ],
+            "whitespace": [
+                "gray30",
+                "normal"
             ]
         },
         "Olive Green": {
@@ -250,6 +310,10 @@
                 "",
                 "normal"
             ],
+            "ml_string": [
+                "",
+                "italic"
+            ],
             "keyword": [
                 "",
                 "italic"
@@ -277,6 +341,14 @@
             "link": [
                 "blue",
                 "italic"
+            ],
+            "functions": [
+                "#0088c2",
+                "normal"
+            ],
+            "whitespace": [
+                "gray30",
+                "normal"
             ]
         },
         "Night Mode": {
@@ -293,6 +365,10 @@
                 "",
                 "normal"
             ],
+            "ml_string": [
+                "",
+                "italic"
+            ],
             "keyword": [
                 "",
                 "italic"
@@ -320,6 +396,14 @@
             "link": [
                 "blue",
                 "italic"
+            ],
+            "functions": [
+                "#0088c2",
+                "normal"
+            ],
+            "whitespace": [
+                "gray30",
+                "normal"
             ]
         },
         "High Contrast": {
@@ -335,6 +419,10 @@
             "string": [
                 "#1aff00",
                 "normal"
+            ],
+            "ml_string": [
+                "#1aff00",
+                "italic"
             ],
             "keyword": [
                 "#ff5500",
@@ -363,7 +451,99 @@
             "link": [
                 "blue",
                 "italic"
+            ],
+            "functions": [
+                "#0088c2",
+                "normal"
+            ],
+            "whitespace": [
+                "gray30",
+                "normal"
             ]
+        }
+    },
+    "suggestion_theme": {
+        "Default": {
+            "background": "",
+            "list_background": "",
+            "foreground": ""
+        },
+        "Greygarious": {
+            "background": "",
+            "list_background": "",
+            "foreground": ""
+        },
+        "Aquamarine": {
+            "background": "",
+            "list_background": "",
+            "foreground": ""
+        },
+        "Bold Beige": {
+            "background": "",
+            "list_background": "",
+            "foreground": ""
+        },
+        "Cobalt Blue": {
+            "background": "",
+            "list_background": "",
+            "foreground": ""
+        },
+        "Olive Green": {
+            "background": "",
+            "list_background": "",
+            "foreground": ""
+        },
+        "Night Mode": {
+            "background": "",
+            "list_background": "",
+            "foreground": ""
+        },
+        "High Contrast": {
+            "background": "",
+            "list_background": "",
+            "foreground": ""
+        }
+    },
+    "tooltip_theme": {
+        "Default": {
+            "msg_border": "",
+            "background": "",
+            "foreground": ""
+        },
+        "Greygarious": {
+            "msg_border": "",
+            "background": "",
+            "foreground": ""
+        },
+        "Aquamarine": {
+            "msg_border": "",
+            "background": "",
+            "foreground": ""
+        },
+        "Bold Beige": {
+            "msg_border": "",
+            "background": "",
+            "foreground": ""
+        },
+        "Cobalt Blue": {
+            "msg_border": "",
+            "background": "",
+            "foreground": ""
+        },
+        "Olive Green": {
+            "msg_border": "",
+            "background": "",
+            "foreground": ""
+        },
+        "Night Mode": {
+            "msg_border": "",
+            "background": "",
+            "foreground": ""
+        },
+        "High Contrast": {
+            "msg_border": "",
+            "background": "",
+            "foreground": ""
         }
     }
 }

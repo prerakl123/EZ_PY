@@ -1,11 +1,7 @@
 {
-    "output_font": [
-        "Consolas",
-        10
-    ],
     "color_text_font": [
         "Consolas",
-        12
+        11
     ],
     "tab_length": 4,
     "themes": {

@@ -1,4 +1,5 @@
 # importing modules
+import subprocess
 from tkinter import *
 import tkinter.ttk as ttk
 import json
@@ -6,6 +7,7 @@ import tkinter.messagebox as tk_mb
 import tkinter.filedialog as tk_fd
 import windnd
 import chardet
+import os
 # importing console, theme window, *.md reader, and Python Editor
 from MDText import MDText
 from HandyConsole import Console as TextConsole
@@ -13,7 +15,6 @@ from ColorText import ColorText
 from ThemeSelection import ThemeWin
 from Tooltip import ToolTip
 from ttkthemes import ThemedTk
-
 
 
 # json configuration file
@@ -52,6 +53,8 @@ class CustomNotebook(ttk.Notebook):
         self.bind('<Control-o>', self.open_file)
         self.bind('<Control-F4>', lambda event: [self.on_close_press(event), self.on_close_release(event)])
         self.bind('<Control-w>', self.close)
+        self.master.bind('<Control-Shift-F>', lambda _=None: subprocess.Popen(
+            ['python', f'{os.path.abspath("FindInFiles.py")}']))
 
     def on_cw_close(self, event):
         self.event_generate('<<NotebookTabClosed>>')
@@ -700,7 +703,7 @@ def theme_settings(event, root):
     ThemeWin(root).focus_force()
 
 
-def main():
+def run_main():
     root = ThemedTk(fonts=True, themebg=True)
     root.set_theme(root.themes[9])
     root.minsize(400, 400)
@@ -735,4 +738,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    run_main()

@@ -1,7 +1,6 @@
 from time import time
 import tkinter as tk
 from tkinter import *
-import json
 
 
 class ToolTip(tk.Toplevel):
@@ -10,7 +9,7 @@ class ToolTip(tk.Toplevel):
     To apply a ToolTip to any tkinter widget, simply pass the widget to the
     ToolTip constructor
     """
-    def __init__(self, wdgt, tooltip_font, msg=None, msgFunc=None, delay=0.5, follow=True):
+    def __init__(self, wdgt, tooltip_font, msg=None, msgfunc=None, delay=0.5, follow=True):
         """
         Initialize the ToolTip
 
@@ -18,7 +17,7 @@ class ToolTip(tk.Toplevel):
           wdgt:         The widget this ToolTip is assigned to
           tooltip_font: Font to be used
           msg:          A static string message assigned to the ToolTip
-          msgFunc:      A function that retrieves a string to use as the ToolTip text
+          msgfunc:      A function that retrieves a string to use as the ToolTip text
           delay:        The delay in seconds before the ToolTip appears(may be float)
           follow:       If True, the ToolTip follows motion, otherwise hides
         """
@@ -46,10 +45,7 @@ class ToolTip(tk.Toplevel):
         else:
             self.msgVar.set(msg)
 
-        with open('config.json', 'r') as file:
-            self.config_dict = json.load(file)
-
-        self.msgFunc = msgFunc
+        self.msgFunc = msgfunc
         self.delay = delay
         self.follow = follow
         self.visible = 0
@@ -105,7 +101,7 @@ class ToolTip(tk.Toplevel):
         #         tuple(reversed(self.wdgt.winfo_pointerxy())) < tuple(reversed(screen_hw)):
         # self.geometry('+%i+%i' % (event.x_root-int(len(self.msgVar.get())), event.y_root-10))
         # else:
-        self.geometry('+%i+%i' % (event.x_root+3, event.y_root-30))
+        self.geometry('+%i+%i' % (event.x_root+8, event.y_root+18))
         try:
             # Try to call the message function.  Will not change
             # the message if the message function is None or
@@ -124,7 +120,7 @@ class ToolTip(tk.Toplevel):
         self.visible = 0
         self.withdraw()
 
-    def update(self, msg):
+    def _update(self, msg):
         """
         Updates the Tooltip with a new message.
         """
@@ -141,11 +137,11 @@ if __name__ == '__main__':
     ToolTip(b2, 'Consolas 12', 'This is a button -> Button-2')
     b3 = Button(root, text='Button 2', width=10, height=2)
     b3.pack(anchor=N)
-    ToolTip(b3, 'Consolas 12', 'This is a button -> Button-3')    
+    ToolTip(b3, 'Consolas 12', 'This is a button -> Button-3')
 
-    def show_info(text):
-        label.configure(text=text)
-        ttip = ToolTip(text_widget, 'Consolas 12', text, msgFunc=lambda a=None: label.cget('text'), follow=True)
+    def show_info(_text):
+        label.configure(text=_text)
+        ttip = ToolTip(text_widget, 'Consolas 12', text, msgfunc=lambda a=None: label.cget('text'), follow=True)
 
     text_widget = tk.Text(root)
     label = tk.Label(root)
@@ -160,8 +156,8 @@ if __name__ == '__main__':
         text_widget.insert("end", text+"\n", (tag, ))
         text_widget.tag_configure(tag, background=color, foreground="white")
         text_widget.tag_bind(tag, "<Enter>",
-                             lambda event, color=color: show_info(color))
+                             lambda event, _color=color: show_info(_color))
         text_widget.tag_bind(tag, "<Leave>",
-                             lambda event, color=color: show_info(""))
+                             lambda event, _color=color: show_info(""))
 
     root.mainloop()

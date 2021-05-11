@@ -34,6 +34,9 @@ class ColorText(Text):
         self.config(fg=self.theme[0], bg=self.theme[1], insertbackground=self.theme[2],
                     undo=1, selectbackground=self.theme[3])
         #            tabs=str(0.95*(int(self.config_dict['tab_length'])/4))+'c')
+        self.master.config(bg=self.theme[1])
+
+        self.config(height=1, width=1)
 
         self.linenumbers = LineNumberCanvas(self.master, width=15)
 
@@ -62,6 +65,7 @@ class ColorText(Text):
 
         self.textfilter = re.compile(self.sort_regex(), re.S)
         self.color_text_font = Font(self, font=self.config_dict['color_text_font'])
+        # print(self.sort_regex())
 
         self.bind('3', self.on_alt_3)
         self.bind('<<Paste>>', lambda _=None: self.after(12, self.on_paste))
@@ -177,6 +181,7 @@ class ColorText(Text):
     def _set_(self):
         self.linenumbers.connect(self)
         self.linenumbers.pack(side=LEFT, fill=Y)
+        self.linenumbers.config_dict = self.config_dict
         return
 
     def autocomplete(self, val):
@@ -500,6 +505,7 @@ class ColorText(Text):
             self.tag_remove(start, stop)
 
         for i in self.textfilter.finditer(val):
+            # print(i)
             _start = i.start()
             end = i.end() - 1
             tagtype, color, font_style = self.check(k=i.groupdict())
@@ -1151,7 +1157,7 @@ class ColorText(Text):
 
         # Regex for list of Python built-in functions
         builtinlist = [str(name) for name in dir(builtins) if not name.startswith('_') and name not in keyword.kwlist]
-        builtin = r"([^=.'\"\\#]\b|^)" + self._any("BUILTIN", builtinlist) + r"\b"
+        builtin = r"\b" + self._any("BUILTIN", builtinlist) + r"\b"
 
         # Regex for comments
         comment = self._any("COMMENT", [r"#[^\n]*|@[^ ][^\n][^ ]*"])
@@ -1288,6 +1294,8 @@ class ColorText(Text):
         self.theme = self.config_dict['themes'][self.config_dict['selected_theme']].split('.')
         self.config(fg=self.theme[0], bg=self.theme[1], insertbackground=self.theme[2])
         #           tabs=str(0.95*(int(self.config_dict['tab_length'])/4))+'c')
+        self.linenumbers.config_dict = self.config_dict
+        self.see(INSERT)
 
         # self.linenumbers.id.config(fill=self.theme[0])
         # print(self.dlineinfo(INSERT))

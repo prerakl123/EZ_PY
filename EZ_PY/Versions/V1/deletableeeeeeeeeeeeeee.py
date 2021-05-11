@@ -6,13 +6,13 @@
 # from idlelib.delegator import Delegator
 # from idlelib.percolator import Percolator
 # from idlelib.config import idleConf
-from tkinter import *
+# from tkinter import *
 # import tokenize
 
 
-root = Tk()
-root.bind('<Any-Key>', lambda _=None: print(_))
-root.mainloop()
+# root = Tk()
+# root.bind('<Any-Key>', lambda _=None: print(_))
+# root.mainloop()
 # x = view_text(root, 'Trial', 'Aloo Pakoda is not the best')
 # d = ViewFrame(root, 'nope')
 # d.pack()
@@ -294,13 +294,118 @@ root.mainloop()
 #     j_o = json.dumps(d_dict, indent=4)
 #     file2.write(j_o)
 
-##from typing import AnyStr, Any, Iterable
-##
-##
-##def soe(a: AnyStr, b: Any) -> Iterable:
-##    return list(a) + list(b)
-##
-##
-##print(soe(b'0b01001100001111001001101010001111100000011111000000100100111000000111101101001000010011110001110',
-##    ['poopoo', 'peepee', 'tootoo', 'teetee']))
+# from typing import AnyStr, Any, Iterable
+#
+#
+# def soe(a: AnyStr, b: Any) -> Iterable:
+#     return list(a) + list(b)
+#
+#
+# print(soe(b'0b01001100001111001001101010001111100000011111000000100100111000000111101101001000010011110001110',
+#    ['poopoo', 'peepee', 'tootoo', 'teetee']))
 
+
+import ctypes
+import ctypes.wintypes as wintypes
+import tkinter as tk
+
+
+class App(tk.Tk):
+    ''' generic tk app with win api interaction '''
+    enum_windows = ctypes.windll.user32.EnumWindows
+    is_window_visible = ctypes.windll.user32.IsWindowVisible
+    get_window_rect = ctypes.windll.user32.GetWindowRect
+    create_rect_rgn = ctypes.windll.gdi32.CreateRectRgn
+    combine_rgn = ctypes.windll.gdi32.CombineRgn
+    del_rgn = ctypes.windll.gdi32.DeleteObject
+    get_parent = ctypes.windll.user32.GetParent
+    enum_windows_proc = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+
+    def __init__(self):
+        """ generic __init__ """
+        super().__init__()
+        self.minsize(350, 200)
+
+        self.status_label = tk.Label(self)
+        self.status_label.pack()
+
+        self.after(100, self.continuous_check)
+        self.state = ''
+
+    def continuous_check(self):
+        """ continuous (self-scheduled) check """
+        state = self.determine_obscuration()
+
+        if self.state != state:
+            #   mimic the event - fire only when state changes
+            print(state)
+            self.status_label.config(text=state)
+            self.state = state
+        self.after(100, self.continuous_check)
+
+    def enumerate_higher_windows(self, self_hwnd):
+        """ enumerate window, which has a higher position in z-order """
+
+        @self.enum_windows_proc
+        def enum_func(hwnd, lParam):
+            """ clojure-callback for enumeration """
+            rect = wintypes.RECT()
+            if hwnd == lParam:
+                #   stop enumeration if hwnd is equal to lParam (self_hwnd)
+                return False
+            else:
+                #   continue enumeration
+                if self.is_window_visible(hwnd):
+                    self.get_window_rect(hwnd, ctypes.byref(rect))
+                    rgn = self.create_rect_rgn(rect.left, rect.top, rect.right, rect.bottom)
+                    #   append region
+                    rgns.append(rgn)
+            return True
+
+        rgns = []
+        self.enum_windows(enum_func, self_hwnd)
+
+        return rgns
+
+    def determine_obscuration(self):
+        """ determine obscuration via CombineRgn """
+        hwnd = self.get_parent(self.winfo_id())
+        results = {1: 'VisibilityFullyObscured', 2: 'VisibilityUnobscured', 3: 'VisibilityPartiallyObscured'}
+        rgns = self.enumerate_higher_windows(hwnd)
+        result = 2
+
+        if len(rgns):
+            rect = wintypes.RECT()
+            self.get_window_rect(hwnd, ctypes.byref(rect))
+
+            #   region of tk-window
+            reference_rgn = self.create_rect_rgn(rect.left, rect.top, rect.right, rect.bottom)
+            #   temp region for storing diff and xor rgn-results
+            rgn = self.create_rect_rgn(0, 0, 0, 0)
+
+            #   iterate over stored results
+            for _ in range(len(rgns)):
+                _rgn = rgn if _ != 0 else reference_rgn
+                result = self.combine_rgn(rgn, _rgn, rgns[_], 4)
+                self.del_rgn(rgns[_])
+
+            if result != 2:
+                #   if result isn't a single rectangle
+                #   (NULLREGION - 'VisibilityFullyObscured' or COMPLEXREGION - 'VisibilityPartiallyObscured')
+                pass
+            elif self.combine_rgn(rgn, reference_rgn, rgn, 3) == 1:
+                #   if result of XOR is NULLREGION - 'VisibilityUnobscured'
+                result = 2
+            else:
+                #   'VisibilityPartiallyObscured'
+                result = 3
+
+            #   clear up regions to prevent memory leaking
+            self.del_rgn(rgn)
+            self.del_rgn(reference_rgn)
+
+        return results[result]
+
+
+app = App()
+app.mainloop()

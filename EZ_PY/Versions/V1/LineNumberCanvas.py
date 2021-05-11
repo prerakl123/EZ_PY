@@ -9,6 +9,7 @@ class LineNumberCanvas(Canvas):
         self.breakpoints = []
         self.id = None
         self.temp = None
+        self.config_dict = None
 
     def connect(self, text_widget):
         self.text_widget = text_widget
@@ -26,7 +27,7 @@ class LineNumberCanvas(Canvas):
             x = dline[0]
             linenum = str(self.temp).split(".")[0]
 
-            self.id = self.create_text(2, y, anchor="nw", text=linenum, font='Consolas 13',
+            self.id = self.create_text(2, y, anchor="nw", text=linenum, font=self.config_dict['color_text_font'],
                                        fill=self.text_widget.theme[0])
 
             if int(linenum) in self.breakpoints:                

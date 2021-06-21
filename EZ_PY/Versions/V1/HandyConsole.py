@@ -7,7 +7,7 @@ from ColorText import ColorText
 
 
 class Console(tk.Frame):
-    def __init__(self, parent=None, **kwargs):
+    def __init__(self, parent=None, console='python', **kwargs):
         tk.Frame.__init__(self, parent, **kwargs)
         self.parent = parent
 
@@ -17,9 +17,17 @@ class Console(tk.Frame):
         self.ttytext.linenumbers.pack_forget()
 
         consolepath = os.path.join(os.path.dirname(__file__), "console.py")
-
-        self.p = subprocess.Popen(["python", consolepath], stdout=subprocess.PIPE, stdin=subprocess.PIPE,
-                                  stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)    # ["jupyter", "qtconsole"]
+        if console == 'cmd':
+            self.p = subprocess.Popen(["powershell"], stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+                                      stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
+        else:
+            try:
+                self.p = subprocess.Popen(["ipython"], stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+                                          stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
+            except FileNotFoundError or Exception:
+                self.p = subprocess.Popen(['python', consolepath], stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+                                          stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
+        # ["jupyter", "qtconsole"]
 
         # make queues for keeping stdout and stderr whilst it is transferred between threads
         self.outQueue = queue.Queue()
@@ -55,7 +63,7 @@ class Console(tk.Frame):
         #            '<backslash>', '<bracketright>', '<asciicircum>', '<underscore>', '<quoteleft>', '<braceleft>',
         #            '<bar>', '<braceright>', '<asciitilde>', '<Tab>'] + [f'{j}' for j in range(0, 10)]
         # for i in keylist:
-            # self.ttytext.bind(f'{i}', self.on_key)
+        #     self.ttytext.bind(f'{i}', self.on_key)
 
     def destroy(self):
         """This is the function that is automatically called when the widget is destroyed."""
@@ -70,21 +78,24 @@ class Console(tk.Frame):
     def enter(self, event):
         """The <Return> key press handler"""
         cur_ind = str(self.ttytext.index(tk.INSERT))
-        if int(cur_ind.split('.')[0]) < int(self.ttytext.search(': ', tk.END, backwards=True).split('.')[0]):
-            try:
-                selected = self.ttytext.get('sel.first', 'sel.last')
-                if len(selected) > 0:
-                    self.ttytext.insert(tk.END, selected)
+        try:
+            if int(cur_ind.split('.')[0]) < int(self.ttytext.search(': ', tk.END, backwards=True).split('.')[0]):
+                try:
+                    selected = self.ttytext.get('sel.first', 'sel.last')
+                    if len(selected) > 0:
+                        self.ttytext.insert(tk.END, selected)
+                        self.ttytext.mark_set(tk.INSERT, tk.END)
+                        self.ttytext.see(tk.INSERT)
+                        return 'break'
+                except:
+                    selected = self.ttytext.get(
+                        self.ttytext.search(': ', tk.INSERT, backwards=True), tk.INSERT)
+                    self.ttytext.insert(tk.END, selected.strip(': '))
                     self.ttytext.mark_set(tk.INSERT, tk.END)
                     self.ttytext.see(tk.INSERT)
-                    return 'break'
-            except:
-                selected = self.ttytext.get(
-                    self.ttytext.search(': ', tk.INSERT, backwards=True), tk.INSERT)
-                self.ttytext.insert(tk.END, selected.strip(': '))
-                self.ttytext.mark_set(tk.INSERT, tk.END)
-                self.ttytext.see(tk.INSERT)
-            return 'break'
+                return 'break'
+        except:
+            pass
         string = self.ttytext.get(1.0, tk.END)[self.line_start:]
         self.line_start += len(string)
         self.p.stdin.write(string.encode())
@@ -146,6 +157,7 @@ class Console(tk.Frame):
 
 if __name__ == '__main__':
     root = tk.Tk()
+    root.geometry('500x500+100+100')
     main_window = Console(root)
     main_window.pack(fill=tk.BOTH, expand=True)
     main_window.ttytext.focus_force()
